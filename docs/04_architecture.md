@@ -142,6 +142,39 @@ sequenceDiagram
     DecisionEngine-->>Gateway: Approve / Review / Block
     DecisionEngine->>Logging: Store Decision & Features
 ```
+## 6.1 How to Interpret the Architecture
+
+The first diagram shows the logical system components and data flow.  
+Transactions arrive from the payment gateway, features are generated in real-time, and the fraud model produces a probability score. The decision engine then converts this probability into an operational action. All predictions are logged for monitoring and future retraining.
+
+The second diagram illustrates the sequence of events for a single transaction, highlighting latency-sensitive components and the separation between prediction and decision logic.
+
+---
+
+## 6.2 Key Design Decisions
+
+The architecture reflects common patterns used in antifraud systems:
+
+**1. Separation of Model and Decision Logic**  
+The machine learning model outputs a probability, while business rules determine the final action. This allows risk teams to adjust thresholds without retraining models.
+
+**2. Real-Time vs Batch Separation**  
+Real-time scoring is required for transaction approval, while training and monitoring occur offline to ensure stability and reproducibility.
+
+**3. Logging for Auditability**  
+All predictions and features are stored to support model monitoring, drift detection, and compliance audits.
+
+**4. Model Versioning**  
+Models are stored in a registry to allow rollback and reproducibility.
+
+**5. Extensibility**  
+The architecture allows future additions such as feature stores, manual review queues, or graph-based fraud detection.
+
+These decisions simulate a production antifraud environment rather than a Kaggle-only modeling pipeline.
+
+## 6.3 Limitations of This Architecture
+
+This architecture is a simplified representation. In real production systems, additional components such as streaming infrastructure, feature stores, and high-availability deployments would be required.
 
 ---
 
