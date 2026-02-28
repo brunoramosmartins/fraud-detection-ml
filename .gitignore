@@ -1,0 +1,79 @@
+# ==============================
+# Kaggle / Secrets
+# ==============================
+.kaggle/
+kaggle.json
+.env
+.env.*
+
+# ==============================
+# Data
+# ==============================
+data/raw/
+data/interim/
+data/processed/
+*.csv
+*.parquet
+*.feather
+*.pkl
+*.joblib
+
+# (se quiser versionar dados pequenos, remova essas linhas)
+
+# ==============================
+# Python Environments
+# ==============================
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# ==============================
+# Python Cache
+# ==============================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ==============================
+# Jupyter
+# ==============================
+.ipynb_checkpoints/
+*.nbconvert.ipynb
+
+# ==============================
+# OS Files
+# ==============================
+.DS_Store
+Thumbs.db
+
+# ==============================
+# Logs
+# ==============================
+*.log
+logs/
+
+# ==============================
+# Model Artifacts
+# ==============================
+models/
+outputs/
+checkpoints/
+*.onnx
+*.h5
+*.pt
+
+# ==============================
+# IDE / Editor
+# ==============================
+.vscode/
+.idea/
+
+# ==============================
+# Build / Misc
+# ==============================
+dist/
+build/
+*.egg-info/
