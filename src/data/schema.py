@@ -19,7 +19,9 @@ NO_MISSING_COLUMNS = {
 
 EXPECTED_DTYPES: Dict[str, str] = {
     "TransactionID": "int64",
-    "TransactionDT": "float64",
+    # In the raw dataset TransactionDT is typically an integer-like time index.
+    # We only require it to be stored as 64-bit integer here.
+    "TransactionDT": "int64",
     "TransactionAmt": "float64",
     "isFraud": "int64",
 }

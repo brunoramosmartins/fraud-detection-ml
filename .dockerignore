@@ -1,0 +1,35 @@
+.git/
+.gitignore
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Development files
+notebooks/
+*.ipynb
+tmp.py
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Raw data — never bake into the image
+data/
+
+# Monitoring outputs and run history — not needed for serving
+artifacts/monitoring/
+artifacts/runs/
+
+# Tests — not needed in production image
+tests/
+
+# Docs and scripts — not needed in production image
+docs/
+scripts/
