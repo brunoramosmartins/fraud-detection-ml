@@ -66,6 +66,11 @@ checkpoints/
 *.pt
 
 # ==============================
+# Monitoring Outputs (generated)
+# ==============================
+artifacts/monitoring/
+
+# ==============================
 # IDE / Editor
 # ==============================
 .vscode/
