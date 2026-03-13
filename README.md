@@ -1,199 +1,207 @@
-# IEEE-CIS Fraud Detection – End-to-End ML System Simulation
+# Fraud Detection ML System
 
-## 1. Project Overview
+> End-to-end machine learning system for card-not-present fraud detection — from raw data to a containerized inference API with drift monitoring and automated retraining simulation.
 
-This repository simulates a production-grade fraud detection system for card-not-present (CNP) e-commerce transactions.
-
-The project is based on the IEEE-CIS Fraud Detection dataset and is structured as a senior-level Machine Learning Engineering project. The objective is not to maximize leaderboard performance, but to design and document a realistic, cost-sensitive antifraud system aligned with business and operational constraints.
-
-The system is treated as a decision engine that:
-
-- Estimates fraud probability for each transaction
-- Applies threshold-based business logic
-- Minimizes expected monetary loss
-- Respects operational constraints (latency, review capacity)
-
-This repository is organized using issues, milestones, and structured documentation to reflect real-world ML system development.
+![Python](https://img.shields.io/badge/Python-3.10-blue)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-1.7-orange)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.135-green)
+![Docker](https://img.shields.io/badge/Docker-ready-blue)
+![pytest](https://img.shields.io/badge/tests-14%20passing-brightgreen)
 
 ---
 
-## 2. Business Objective
+## Key Results
 
-The formal objective of the system is:
+| Metric | Value |
+|---|---|
+| ROC-AUC | **0.861** |
+| PR-AUC | **0.409** |
+| Expected Loss Reduction | **58.7%** ($357,989 vs $609,934 baseline) |
+| Operating Threshold | **0.02** (cost-minimization optimized) |
+| Precision at threshold | 10.1% (industry-typical for fraud at 3.5% base rate) |
+| Features | 380 numeric features (transaction + identity) |
+| Dataset | IEEE-CIS · ~590,000 transactions |
 
-Minimize expected monetary loss from fraudulent transactions while controlling customer friction and operational review costs.
-
-This is implemented through:
-
-- Explicit cost modeling (False Positives vs False Negatives)
-- Expected Monetary Loss optimization
-- Threshold selection under operational constraints
-- Baseline comparison against "approve-all" strategy
-
-The system is therefore framed as a cost-sensitive decision problem, not a generic binary classification task.
-
----
-
-## 3. System Scope
-
-The system simulates a real-world antifraud pipeline including:
-
-### Real-Time Scoring
-
-- Transaction event received from payment gateway
-- Feature generation and retrieval
-- Fraud probability prediction
-- Decision engine (approve / review / block)
-- Logging for monitoring and audit
-
-Latency assumption:
-- P95 < 200 ms
-
-### Batch Training and Monitoring
-
-- Periodic retraining on labeled historical data
-- Temporal validation (no random splits)
-- Threshold optimization
-- Drift monitoring
-- Model versioning
-
-This separation reflects production ML architecture patterns.
+> Metrics evaluated on a temporal hold-out set (most recent 20% of transactions). No data leakage.
 
 ---
 
-## 4. Cost Modeling and Optimization
+## System Architecture
 
-The system uses an explicit asymmetric cost structure:
-
-- Cost of False Negative (missed fraud):
-  Approximately equal to TransactionAmount
-
-- Cost of False Positive (incorrectly flagged legitimate transaction):
-  Fixed operational cost (e.g., 5 monetary units)
-
-Primary optimization metric:
-
-Expected Monetary Loss
-
-Thresholds are selected via:
-
-T* = argmin_T L(T)
-
-subject to operational constraints such as review capacity.
-
-This aligns model selection directly with business impact.
+```mermaid
+graph LR
+    A[Raw Data<br/>IEEE-CIS] --> B[Training Pipeline<br/>src/pipelines/]
+    B -->|model + metadata| C[(artifacts/models/)]
+    C --> D[Scoring API<br/>app/main.py<br/>FastAPI · Docker]
+    E[Transaction Simulator<br/>scripts/simulate_transactions.py] -->|POST /predict| D
+    D -->|predictions log| F[(artifacts/monitoring/)]
+    G[Reference Data] --> H[Monitor<br/>scripts/monitor_model.py<br/>PSI · EML]
+    F --> H
+    H -->|drift report| I[Retrain Trigger<br/>scripts/retrain_model.py]
+    I -->|max PSI > threshold| B
+```
 
 ---
 
-## 5. Evaluation Strategy
+## Skills Demonstrated
 
-Due to temporal drift in transaction behavior:
-
-- No random train/test split
-- Temporal validation (train on past, validate on future)
-
-For each model version:
-
-- Compute Expected Monetary Loss
-- Compute PR-AUC and ROC-AUC
-- Compute Fraud Detection Rate (Recall)
-- Compute False Positive Rate
-- Evaluate Review Rate
-- Compare against baseline loss
-
-This simulates real deployment behavior.
+| Phase | Focus | Skills |
+|---|---|---|
+| **0** | System design | ML system architecture, cost modeling, metric design |
+| **1** | Baseline modeling | Cost-sensitive threshold optimization, temporal validation |
+| **2** | Statistical diagnostics | EDA, distribution analysis, class imbalance characterization |
+| **3** | Advanced modeling | Model comparison, PR-AUC, Expected Monetary Loss framework |
+| **4** | ML Engineering | Modular pipelines, artifact versioning, experiment tracking, unit tests |
+| **5** | Deployment simulation | FastAPI, Docker, PSI drift monitoring, retraining automation |
+| **6** | Communication | Executive reporting, trade-off analysis, technical documentation |
 
 ---
 
-## 6. High-Level Architecture
+## Project Phases
 
-The system architecture separates:
+**Phase 0 — System Framing and Architecture**
+Defined the business problem as cost-sensitive decision optimization. Designed the evaluation framework around Expected Monetary Loss rather than accuracy. Documented system scope, latency constraints, and architecture.
+→ [`docs/01_system_scope.md`](docs/01_system_scope.md) · [`docs/04_architecture.md`](docs/04_architecture.md)
 
-- Prediction (Fraud Model API)
-- Decision Logic (Threshold-based policy)
-- Logging and Monitoring
-- Batch Training Pipeline
-- Model Registry
+**Phase 1 — Baseline Modeling and Cost-Sensitive Evaluation**
+Trained a Logistic Regression baseline. Implemented threshold sweep for EML minimization. Established temporal train/validation split to avoid data leakage.
+→ [`docs/05_modeling_strategy.md`](docs/05_modeling_strategy.md)
 
-See:
-docs/04_architecture.md
+**Phase 2 — Statistical Diagnostics**
+Characterized dataset distributions, missing value patterns, and class imbalance. Identified high-cardinality categorical features and temporal structure.
+→ [`docs/02_data_understanding.md`](docs/02_data_understanding.md) · [`docs/06_statistical_diagnostics.md`](docs/06_statistical_diagnostics.md)
 
-The architecture reflects production ML system design rather than notebook-only experimentation.
+**Phase 3 — Advanced Modeling and Model Comparison**
+Trained and compared Logistic Regression, Random Forest, and Gradient Boosting under the same cost-sensitive framework. Selected GB as the deployed model.
+→ [`docs/07_model_comparison.md`](docs/07_model_comparison.md) · [`notebooks/model_comparison_v1.ipynb`](notebooks/model_comparison_v1.ipynb)
 
----
+**Phase 4 — ML Engineering Pipeline**
+Refactored notebooks into a modular `src/` package. Implemented artifact versioning, experiment tracking, and a CLI training script. Added unit tests.
+→ [`docs/08_ml_pipeline.md`](docs/08_ml_pipeline.md)
 
-## 7. Repository Structure
+**Phase 5 — Deployment Simulation and Monitoring**
+Built a FastAPI scoring service with feature contract enforcement. Containerized with Docker. Implemented PSI-based drift monitoring and automated retraining simulation.
+→ [`docs/09_deployment_and_monitoring.md`](docs/09_deployment_and_monitoring.md)
 
-docs/
-- 01_system_scope.md
-- 02_data_understanding.md
-- 03_metrics_and_cost_modeling.md
-- 04_architecture.md
-
-notebooks/
-- eda_v1.ipynb
-- (future modeling and evaluation notebooks)
-
-src/
-- (future feature engineering, training, evaluation modules)
-
-This structure mirrors professional ML project organization.
+**Phase 6 — Reporting and Technical Communication**
+Executive summary, technical deep-dive, trade-off analysis, model limitations, and this README.
+→ [`docs/10_executive_summary.md`](docs/10_executive_summary.md) · [`docs/11_technical_report.md`](docs/11_technical_report.md)
 
 ---
 
-## 8. Development Roadmap
+## Quick Start
 
-Phase 0 – System Framing and Architecture  
-- Business framing  
-- Cost modeling  
-- Architecture definition  
-- Metrics formalization  
+### Prerequisites
 
-Phase 1 – Statistical Baseline and Modeling Strategy  
-- Baseline model  
-- Temporal validation setup  
-- Threshold optimization  
+```bash
+git clone https://github.com/brunoramosmartins/fraud-detection-ml.git
+cd fraud-detection-ml
+python -m venv .venv && source .venv/Scripts/activate  # Windows
+pip install -r requirements-dev.txt
+```
 
-Phase 2 – Feature Engineering and Training Pipeline  
-- Robust preprocessing  
-- Model comparison  
-- Cost-based evaluation  
+Place the IEEE-CIS dataset files in `data/raw/`:
+- `train_transaction.csv`
+- `train_identity.csv`
 
-Phase 3 – Monitoring and Deployment Simulation  
-- Drift analysis  
-- Threshold recalibration  
-- Model version comparison  
+### Train a model
 
-Each phase is tracked through issues and milestones to simulate real engineering workflow.
+```bash
+python scripts/train_model.py \
+  --model gb \
+  --config configs/model_gb_v1.yml
+```
 
----
+### Run tests
 
-## 9. Positioning
+```bash
+python -m pytest tests/ -v
+```
 
-This repository is designed to demonstrate:
+### Start the scoring API
 
-- Cost-sensitive modeling
-- Business-aligned ML decision systems
-- Production-oriented architecture
-- Structured ML project development
-- Reproducibility and documentation discipline
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+# or
+docker build -t fraud-api:latest . && docker run -p 8000:8000 fraud-api:latest
+```
 
-It is intended as a professional portfolio project reflecting senior-level Machine Learning Engineering practices rather than a competition-focused solution.
+### Simulate transactions and monitor
 
----
-
-## 10. Future Work
-
-- Multiple model comparison (Logistic Regression, Gradient Boosting, etc.)
-- Calibration analysis
-- Three-way decision optimization (approve / review / block)
-- Drift simulation and monitoring dashboards
-- Configuration-driven cost parameterization
-- Packaging into deployable scoring service
+```bash
+python scripts/simulate_transactions.py --max-batches 5
+python scripts/monitor_model.py \
+  --reference-path data/raw/train_transaction.csv \
+  --predictions-path artifacts/monitoring/predictions/predictions_<ts>.csv
+```
 
 ---
 
-## 11. Disclaimer
+## Repository Structure
 
-This project uses the IEEE-CIS dataset as a proxy for real banking data.  
-Certain assumptions (cost structure, fraud rate, operational capacity) are simulated for educational and portfolio purposes.
+```
+fraud-detection-ml/
+│
+├── app/                        # FastAPI scoring service
+│   └── main.py                 #   POST /predict · GET /health
+│
+├── src/                        # Core library
+│   ├── data/                   #   Loader, schema validation, temporal split
+│   ├── features/               #   Feature registry and pipeline
+│   ├── models/                 #   Metrics, training factory, artifact management
+│   ├── pipelines/              #   End-to-end training pipeline
+│   └── utils/                  #   Config, tracking, PSI drift
+│
+├── scripts/                    # Operational scripts
+│   ├── train_model.py          #   CLI training entrypoint
+│   ├── simulate_transactions.py#   Batch scoring simulation
+│   ├── monitor_model.py        #   Drift + performance monitoring
+│   └── retrain_model.py        #   Conditional retraining trigger
+│
+├── tests/                      # Unit tests (14 passing)
+│   ├── test_api_scoring.py
+│   ├── test_drift_metrics.py
+│   └── test_metrics.py
+│
+├── configs/                    # Training configurations (YAML)
+├── docs/                       # Documentation (Phases 0–6)
+├── notebooks/                  # Exploratory and reporting notebooks
+├── artifacts/                  # Model artifacts and run metadata
+│   ├── models/                 #   Trained models + metadata JSON
+│   └── runs/                   #   Experiment run records
+│
+├── Dockerfile
+├── requirements.txt            # Production dependencies
+└── requirements-dev.txt        # Development + test dependencies
+```
+
+---
+
+## Documentation Index
+
+| Document | Description |
+|---|---|
+| [`docs/10_executive_summary.md`](docs/10_executive_summary.md) | Non-technical summary for business stakeholders |
+| [`docs/11_technical_report.md`](docs/11_technical_report.md) | Architecture decisions and engineering rationale |
+| [`docs/12_trade_off_analysis.md`](docs/12_trade_off_analysis.md) | Trade-offs and rejected alternatives |
+| [`docs/13_model_limitations.md`](docs/13_model_limitations.md) | Limitations and failure mode analysis |
+| [`docs/09_deployment_and_monitoring.md`](docs/09_deployment_and_monitoring.md) | Deployment and monitoring guide |
+| [`docs/08_ml_pipeline.md`](docs/08_ml_pipeline.md) | ML pipeline architecture |
+| [`docs/07_model_comparison.md`](docs/07_model_comparison.md) | Model comparison results |
+
+---
+
+## Dataset
+
+This project uses the [IEEE-CIS Fraud Detection dataset](https://www.kaggle.com/c/ieee-fraud-detection) (Kaggle).
+
+- ~590,000 e-commerce transactions
+- ~3.5% fraud rate
+- Transaction and identity tables joined on `TransactionID`
+- Raw data is not included in this repository
+
+---
+
+## Disclaimer
+
+This project uses the IEEE-CIS dataset as a proxy for real banking data. Cost parameters, fraud rates, and operational assumptions are simulated for portfolio and educational purposes. This system is not intended for production deployment without additional validation, security review, and regulatory compliance assessment.
