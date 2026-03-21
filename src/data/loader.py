@@ -22,7 +22,9 @@ def merge_transaction_identity(
 
 
 def load_full_training_dataset(
-    base_path: Path, transaction_filename: str = "train_transaction.csv", identity_filename: str = "train_identity.csv"
+    base_path: Path,
+    transaction_filename: str = "train_transaction.csv",
+    identity_filename: str = "train_identity.csv",
 ) -> pd.DataFrame:
     """
     Load and merge the full IEEE-CIS training dataset.

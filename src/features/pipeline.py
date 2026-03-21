@@ -15,6 +15,9 @@ def build_features(df: pd.DataFrame, feature_set: str = "v1") -> Tuple[pd.DataFr
     - return X and the ordered feature list actually used
     """
     feature_list = get_feature_list(df, feature_set=feature_set)
+    missing = [f for f in feature_list if f not in df.columns]
+    if missing:
+        raise ValueError(f"Features missing from DataFrame: {missing[:10]}")
     X = df[feature_list].copy()
     X = X.fillna(0.0)
     return X, feature_list

@@ -207,7 +207,7 @@ A **Loss vs Threshold curve** is produced in the baseline notebook.
 
 Operational metrics reported at \(T^*\):
 
-- Fraud Detection Rate (FDR)
+- Precision (fraction of flagged transactions that are actual fraud)
 - False Positive Rate (FPR)
 
 In this phase:
@@ -234,7 +234,7 @@ The notebook reports the following metrics:
 | T* | Cost-minimizing threshold |
 | Expected Loss Reduction (abs) | baseline_loss − best_loss |
 | Expected Loss Reduction (rel) | relative reduction vs baseline |
-| FDR @ T* | Fraud detection rate |
+| Precision @ T* | Precision among flagged transactions |
 | FPR @ T* | False positive rate |
 
 Diagnostic metrics also reported:

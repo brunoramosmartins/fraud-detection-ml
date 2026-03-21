@@ -104,7 +104,7 @@ def health(request: Request) -> dict:
 
 
 @app.post("/predict", response_model=PredictionResponse)
-def predict(request: PredictionRequest, req: Request) -> PredictionResponse:
+def predict(payload: PredictionRequest, req: Request) -> PredictionResponse:
     model = getattr(req.app.state, "model", None)
     feature_list = getattr(req.app.state, "feature_list", None)
     threshold = getattr(req.app.state, "threshold", 0.5)
@@ -120,7 +120,7 @@ def predict(request: PredictionRequest, req: Request) -> PredictionResponse:
             detail="Feature list not available in deployed metadata",
         )
 
-    records = [t.model_dump() for t in request.transactions]
+    records = [t.model_dump() for t in payload.transactions]
     df = pd.DataFrame(records)
 
     missing = [c for c in feature_list if c not in df.columns]
@@ -139,7 +139,7 @@ def predict(request: PredictionRequest, req: Request) -> PredictionResponse:
             fraud_probability=float(p),
             fraud_flag=bool(p >= threshold),
         )
-        for row, p in zip(request.transactions, proba)
+        for row, p in zip(payload.transactions, proba)
     ]
 
     logger.info(

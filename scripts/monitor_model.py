@@ -51,10 +51,15 @@ def main() -> None:
     ref_df = pd.read_csv(ref_path)
     pred_df = pd.read_csv(pred_path)
 
-    # Drift report: compute PSI for each numeric feature present in both datasets.
+    # Drift report: compute PSI for all shared numeric features.
     drift_report: dict = {}
-    for col in ["TransactionAmt"]:
-        if col in ref_df.columns and col in pred_df.columns:
+    shared_numeric = [
+        col
+        for col in ref_df.select_dtypes(include="number").columns
+        if col in pred_df.columns and col != "isFraud"
+    ]
+    for col in shared_numeric:
+        if col in pred_df.select_dtypes(include="number").columns:
             psi_val = compute_psi(ref_df[col].values, pred_df[col].values)
             drift_report[col] = psi_val
             level = "WARNING" if psi_val > args.psi_threshold else "OK"
@@ -78,7 +83,8 @@ def main() -> None:
             "loss_at_05": loss_at_05,
             "expected_loss_reduction_at_05": baseline - loss_at_05,
         }
-        logger.info("Performance: fraud_rate=%.4f  loss_reduction=%.2f", y_true.mean(), baseline - loss_at_05)
+        reduction = baseline - loss_at_05
+        logger.info("Performance: fraud_rate=%.4f  loss_reduction=%.2f", y_true.mean(), reduction)
 
     ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     drift_dir = Path("artifacts") / "monitoring" / "drift"

@@ -2,7 +2,6 @@ from typing import Dict, Iterable
 
 import pandas as pd
 
-
 REQUIRED_COLUMNS = {
     "TransactionID",
     "TransactionDT",

@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app, _load_deployed_model
+from app.main import app
 
 
 class DummyModel:
@@ -21,7 +21,8 @@ class DummyModelHighRisk:
 
 def _inject_state(app_instance, model=None, feature_list=None, threshold=0.5):
     app_instance.state.model = model or DummyModel()
-    app_instance.state.feature_list = feature_list if feature_list is not None else ["TransactionAmt"]
+    default_features = ["TransactionAmt"]
+    app_instance.state.feature_list = feature_list if feature_list is not None else default_features
     app_instance.state.threshold = threshold
     app_instance.state.model_name = "gb"
     app_instance.state.model_version = "v1"

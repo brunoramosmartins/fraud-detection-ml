@@ -1,0 +1,11 @@
+version: "v1"
+feature_set: "v1"
+split_quantile: 0.8
+c_fp: 5.0
+
+models:
+  rf:
+    n_estimators: 100
+    max_depth: 12
+    min_samples_leaf: 50
+    random_state: 42

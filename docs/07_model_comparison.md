@@ -106,7 +106,7 @@ Configuration choices aim for reproducibility (fixed seed), handling of class im
 - The **optimal threshold \(T^*\)** is the one that **minimizes EML** on the validation set.
 - **Because \(C_{FN} \gg C_{FP}\)** (missing fraud is much costlier than false alarms), the optimal threshold tends to be **lower** than typical classification thresholds (e.g. 0.5). Lower thresholds flag more transactions, reducing missed fraud at the cost of more false positives; under the defined cost structure this trade-off minimizes total loss.
 - A **loss vs threshold** plot is produced for all models; the approve-all baseline loss is shown as a horizontal reference.
-- **Operational metrics** at \(T^*\) (e.g. FDR, FPR, confusion counts) are reported in the comparison table. Threshold stability can be checked by repeating the evaluation on different temporal windows or bootstrap samples (see Phase 2 diagnostics).
+- **Operational metrics** at \(T^*\) (e.g. Precision, FPR, confusion counts) are reported in the comparison table. Threshold stability can be checked by repeating the evaluation on different temporal windows or bootstrap samples (see Phase 2 diagnostics).
 
 ---
 
@@ -114,8 +114,8 @@ Configuration choices aim for reproducibility (fixed seed), handling of class im
 
 The comparison table in `notebooks/model_comparison_v1.ipynb` (Section 9) reports, for each model. **Example from one notebook run:**
 
-| Model | ROC-AUC | PR-AUC | Expected Monetary Loss | Expected Loss Reduction | Optimal Threshold | FDR | FPR |
-|-------|---------|--------|------------------------|--------------------------|-------------------|-----|-----|
+| Model | ROC-AUC | PR-AUC | Expected Monetary Loss | Expected Loss Reduction | Optimal Threshold | Precision | FPR |
+|-------|---------|--------|------------------------|--------------------------|-------------------|-----------|-----|
 | Logistic Regression | 0.825 | 0.176 | 264,155 | 345,779 | 0.42 | 0.102 | 0.235 |
 | Random Forest | 0.870 | 0.449 | 268,935 | 340,999 | 0.45 | 0.147 | 0.150 |
 | Gradient Boosting | 0.861 | 0.409 | **251,945** | **357,989** | 0.02 | 0.101 | 0.259 |
@@ -132,7 +132,7 @@ Column definitions:
 | Expected Monetary Loss | Loss at optimal threshold on validation set |
 | Expected Loss Reduction | Baseline (approve-all) loss minus model loss at \(T^*\) |
 | Optimal Threshold | \(T^*\) minimizing EML |
-| FDR | Precision among flagged: \(TP/(TP+FP)\) |
+| Precision | Fraction of flagged transactions that are fraud: \(TP/(TP+FP)\) |
 | FPR | False positive rate: \(FP/(FP+TN)\) |
 
 The **model with the lowest Expected Monetary Loss** is the primary candidate for deployment. Differences in ROC-AUC or PR-AUC do not directly imply better economic outcome; EML and Expected Loss Reduction do.
@@ -181,5 +181,5 @@ Results from this phase are documented in the notebook; this document provides t
 - **Reproducible comparison:** Same data, same temporal split (80/20 by `TransactionDT`), same preprocessing and cost (\(C_{FP}=5\), \(C_{FN}=\text{TransactionAmt}\)). All models are evaluated on the same validation set.
 - **Primary decision rule:** Choose the model that **minimizes Expected Monetary Loss** at its optimal threshold; ROC-AUC and PR-AUC support interpretation but do not override EML.
 - **Calibration:** Reliability curves and (for RF/GB) Platt scaling show whether probabilities are usable as risks; post-calibration EML is computed for reference. If calibration improves EML and is applied in production, the calibrator and \(T^*\) must be stored with the model.
-- **Threshold:** Each model has its own cost-optimal \(T^*\); the notebook plots loss vs threshold and reports FDR/FPR at \(T^*\) for operational awareness.
+- **Threshold:** Each model has its own cost-optimal \(T^*\); the notebook plots loss vs threshold and reports Precision/FPR at \(T^*\) for operational awareness.
 - **Next steps:** The selected model and \(T^*\) feed into the decision engine (see `04_architecture.md`); monitoring should track realized loss vs the expected loss from this phase.

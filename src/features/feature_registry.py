@@ -2,8 +2,11 @@ from typing import Dict, List
 
 import pandas as pd
 
-
 # Simple feature registry – can be extended with more sets later.
+# NOTE: This module is NOT thread-safe.  Lazy initialization of
+# ``entry["features"]`` mutates the global dict without locking.
+# This is acceptable because the registry is only used in single-process
+# training scripts; the API loads the feature list from model metadata.
 FEATURE_SETS: Dict[str, Dict[str, object]] = {
     "v1": {
         "description": "Numeric features from Phase 3 baseline (exclude IDs and target).",
