@@ -1,7 +1,6 @@
 import argparse
-from pathlib import Path
 import sys
-
+from pathlib import Path
 
 # Ensure project root is on sys.path so that `src` is importable
 PROJECT_ROOT = Path(__file__).resolve().parents[1]

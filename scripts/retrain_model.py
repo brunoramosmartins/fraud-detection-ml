@@ -1,7 +1,7 @@
 import argparse
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
 # Ensure project root is on sys.path so that `src` is importable
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -17,6 +17,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--drift-report", required=True, help="Path to drift report JSON.")
     parser.add_argument(
         "--psi-threshold", type=float, default=0.2, help="PSI threshold to trigger retraining."
+    )
+    parser.add_argument(
+        "--model-name", default="gb", choices=["lr", "rf", "gb"], help="Model to retrain."
     )
     return parser.parse_args()
 
@@ -35,7 +38,7 @@ def main() -> None:
 
     config_path = Path(args.config)
     result = run_training_pipeline(
-        model_name="gb",
+        model_name=args.model_name,
         config_path=config_path,
         dataset_version="ieee-cis-retrained",
     )

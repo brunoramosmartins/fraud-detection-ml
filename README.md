@@ -6,7 +6,9 @@
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-1.7-orange)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.135-green)
 ![Docker](https://img.shields.io/badge/Docker-ready-blue)
-![pytest](https://img.shields.io/badge/tests-14%20passing-brightgreen)
+![pytest](https://img.shields.io/badge/tests-28%20passing-brightgreen)
+![CI](https://img.shields.io/badge/CI-GitHub%20Actions-blue)
+![ruff](https://img.shields.io/badge/linting-ruff-purple)
 
 ---
 
@@ -54,6 +56,7 @@ graph LR
 | **4** | ML Engineering | Modular pipelines, artifact versioning, experiment tracking, unit tests |
 | **5** | Deployment simulation | FastAPI, Docker, PSI drift monitoring, retraining automation |
 | **6** | Communication | Executive reporting, trade-off analysis, technical documentation |
+| **7** | Interview readiness | Architecture diagrams, ADRs, hyperparameter analysis, demo runbook |
 
 ---
 
@@ -87,53 +90,46 @@ Built a FastAPI scoring service with feature contract enforcement. Containerized
 Executive summary, technical deep-dive, trade-off analysis, model limitations, and this README.
 → [`docs/10_executive_summary.md`](docs/10_executive_summary.md) · [`docs/11_technical_report.md`](docs/11_technical_report.md)
 
+**Phase 7 — Interview Maximization**
+Architecture diagrams, hyperparameter analysis, Architecture Decision Records, extensions roadmap, and demo runbook.
+→ [`docs/diagrams/01_system_architecture.md`](docs/diagrams/01_system_architecture.md) · [`docs/14_hyperparameter_guide.md`](docs/14_hyperparameter_guide.md) · [`docs/decisions/`](docs/decisions/) · [`DEMO.md`](DEMO.md)
+
 ---
 
 ## Quick Start
 
-### Prerequisites
-
 ```bash
+# Clone and install
 git clone https://github.com/brunoramosmartins/fraud-detection-ml.git
 cd fraud-detection-ml
+make setup                   # creates .venv and installs requirements-dev.txt
+
+# Full demo pipeline (train + test)
+make demo
+
+# Or step by step
+make train                   # train GB model
+make test                    # run 28 unit tests with coverage
+make api                     # start API on port 8000 (Terminal 1)
+make simulate                # score 500 transactions (Terminal 2)
+make monitor                 # compute PSI and performance metrics
+```
+
+See [`DEMO.md`](DEMO.md) for the full interview walkthrough with anticipated questions and answers.
+
+### Manual Setup (without Make)
+
+```bash
 python -m venv .venv && source .venv/Scripts/activate  # Windows
 pip install -r requirements-dev.txt
+python scripts/train_model.py --model gb --config configs/model_gb_v1.yml
+python -m pytest tests/ -v
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-Place the IEEE-CIS dataset files in `data/raw/`:
+Place the IEEE-CIS dataset files in `data/raw/` before training:
 - `train_transaction.csv`
 - `train_identity.csv`
-
-### Train a model
-
-```bash
-python scripts/train_model.py \
-  --model gb \
-  --config configs/model_gb_v1.yml
-```
-
-### Run tests
-
-```bash
-python -m pytest tests/ -v
-```
-
-### Start the scoring API
-
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-# or
-docker build -t fraud-api:latest . && docker run -p 8000:8000 fraud-api:latest
-```
-
-### Simulate transactions and monitor
-
-```bash
-python scripts/simulate_transactions.py --max-batches 5
-python scripts/monitor_model.py \
-  --reference-path data/raw/train_transaction.csv \
-  --predictions-path artifacts/monitoring/predictions/predictions_<ts>.csv
-```
 
 ---
 
@@ -154,23 +150,37 @@ fraud-detection-ml/
 │
 ├── scripts/                    # Operational scripts
 │   ├── train_model.py          #   CLI training entrypoint
+│   ├── evaluate_model.py       #   End-to-end model evaluation
 │   ├── simulate_transactions.py#   Batch scoring simulation
 │   ├── monitor_model.py        #   Drift + performance monitoring
 │   └── retrain_model.py        #   Conditional retraining trigger
 │
-├── tests/                      # Unit tests (14 passing)
+├── tests/                      # Unit tests (28 passing)
 │   ├── test_api_scoring.py
+│   ├── test_data_loader.py
 │   ├── test_drift_metrics.py
+│   ├── test_factory.py
+│   ├── test_features.py
 │   └── test_metrics.py
 │
-├── configs/                    # Training configurations (YAML)
-├── docs/                       # Documentation (Phases 0–6)
+├── configs/                    # Training configurations (YAML: GB, LR, RF)
+├── docs/                       # Documentation (Phases 0–7)
+│   ├── diagrams/               #   Architecture diagrams (Mermaid)
+│   ├── decisions/              #   Architecture Decision Records (ADR-001–005)
+│   └── *.md                    #   Phase documents, trade-offs, limitations
 ├── notebooks/                  # Exploratory and reporting notebooks
 ├── artifacts/                  # Model artifacts and run metadata
 │   ├── models/                 #   Trained models + metadata JSON
 │   └── runs/                   #   Experiment run records
 │
 ├── Dockerfile
+├── docker-compose.yml          # One-command deployment
+├── Makefile                    # One-command demo pipeline
+├── pyproject.toml              # Project metadata, pytest, ruff config
+├── .pre-commit-config.yaml     # Ruff linting and formatting hooks
+├── .github/workflows/ci.yml   # CI: lint + test + coverage
+├── DEMO.md                     # Interview runbook with Q&A
+├── CONTRIBUTING.md             # Dev setup and commit conventions
 ├── requirements.txt            # Production dependencies
 └── requirements-dev.txt        # Development + test dependencies
 ```
@@ -179,15 +189,19 @@ fraud-detection-ml/
 
 ## Documentation Index
 
-| Document | Description |
-|---|---|
-| [`docs/10_executive_summary.md`](docs/10_executive_summary.md) | Non-technical summary for business stakeholders |
-| [`docs/11_technical_report.md`](docs/11_technical_report.md) | Architecture decisions and engineering rationale |
-| [`docs/12_trade_off_analysis.md`](docs/12_trade_off_analysis.md) | Trade-offs and rejected alternatives |
-| [`docs/13_model_limitations.md`](docs/13_model_limitations.md) | Limitations and failure mode analysis |
-| [`docs/09_deployment_and_monitoring.md`](docs/09_deployment_and_monitoring.md) | Deployment and monitoring guide |
-| [`docs/08_ml_pipeline.md`](docs/08_ml_pipeline.md) | ML pipeline architecture |
-| [`docs/07_model_comparison.md`](docs/07_model_comparison.md) | Model comparison results |
+| Document | Audience | Description |
+|---|---|---|
+| [`DEMO.md`](DEMO.md) | Interview | 5-minute walkthrough, commands, anticipated Q&A |
+| [`docs/10_executive_summary.md`](docs/10_executive_summary.md) | Business | Non-technical summary with monetary impact |
+| [`docs/11_technical_report.md`](docs/11_technical_report.md) | Engineering | Architecture, modeling decisions, production gap |
+| [`docs/12_trade_off_analysis.md`](docs/12_trade_off_analysis.md) | Engineering | 6 trade-offs with rejected alternatives |
+| [`docs/13_model_limitations.md`](docs/13_model_limitations.md) | Engineering | 7 limitations and failure modes |
+| [`docs/14_hyperparameter_guide.md`](docs/14_hyperparameter_guide.md) | Engineering | GB hyperparameter reasoning and sensitivity |
+| [`docs/diagrams/01_system_architecture.md`](docs/diagrams/01_system_architecture.md) | Engineering | 5 Mermaid diagrams (topology, request flow, startup) |
+| [`docs/decisions/`](docs/decisions/) | Engineering | 5 Architecture Decision Records (ADR-001–005) |
+| [`docs/15_extensions_roadmap.md`](docs/15_extensions_roadmap.md) | Engineering | 13 concrete next steps toward production |
+| [`docs/09_deployment_and_monitoring.md`](docs/09_deployment_and_monitoring.md) | Engineering | Deployment and monitoring guide |
+| [`notebooks/06_results_dashboard.ipynb`](notebooks/06_results_dashboard.ipynb) | All | Visual metrics dashboard (ROC, PR, confusion matrix, EML) |
 
 ---
 

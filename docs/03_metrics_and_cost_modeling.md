@@ -167,12 +167,12 @@ For selected thresholds:
 - Recall @ Fixed Precision  
 - Precision @ Fixed Recall  
 - False Positive Rate (FPR)  
-- Fraud Detection Rate (FDR)
+- Precision (fraction of flagged transactions that are actual fraud)
 
 Where:
 
 $$
-FDR = \frac{TP}{TP + FN}
+\text{Precision} = \frac{TP}{TP + FP}
 $$
 
 $$
@@ -256,7 +256,7 @@ Procedure:
 3. Compute predictions.
 4. For a grid of thresholds:
    - Compute $L(T)$
-   - Compute FDR, FPR
+   - Compute Precision, FPR
    - Compute PR-AUC
    - Compute ReviewRate
 

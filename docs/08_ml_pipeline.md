@@ -68,7 +68,7 @@ Scaling is handled inside the model pipeline (for logistic regression) using sci
 - `metrics.py` contains:
   - Expected Monetary Loss computation (`expected_loss`, `approve_all_baseline_loss`).
   - Threshold sweep and optimal threshold selection (`threshold_sweep`).
-  - ROC-AUC, PR-AUC, FDR, FPR computation and a `compute_classification_metrics` helper
+  - ROC-AUC, PR-AUC, Precision, FPR computation and a `compute_classification_metrics` helper
     that returns all metrics in a single dictionary.
 
 ## 7. Training Pipeline and Experiment Tracking

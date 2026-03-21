@@ -15,6 +15,7 @@ from src.utils.tracking import end_run, log_artifacts, log_metrics, start_run
 
 
 def load_config(config_path: Path) -> Dict[str, Any]:
+    """Load a YAML configuration file and return it as a dictionary."""
     with config_path.open("r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
@@ -24,6 +25,22 @@ def run_training_pipeline(
     config_path: Path,
     dataset_version: str = "ieee-cis-original",
 ) -> Dict[str, Any]:
+    """Execute the full training pipeline: load, validate, split, train, evaluate, persist.
+
+    Parameters
+    ----------
+    model_name : str
+        Model identifier passed to :func:`get_model` (``"lr"``, ``"rf"``, or ``"gb"``).
+    config_path : Path
+        Path to the YAML config with hyperparameters and feature set.
+    dataset_version : str
+        Label recorded in run metadata for traceability.
+
+    Returns
+    -------
+    Dict[str, Any]
+        Paths to the saved model, metadata, and run record, plus computed metrics.
+    """
     cfg.MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
     config = load_config(config_path)
@@ -48,11 +65,12 @@ def run_training_pipeline(
     model.fit(X_train, y_train)
     val_proba = model.predict_proba(X_val)[:, 1]
 
+    c_fp = config.get("c_fp", cfg.C_FP)
     metrics = compute_classification_metrics(
         y_true=y_val,
         proba=val_proba,
         amount=val_amount,
-        c_fp=cfg.C_FP,
+        c_fp=c_fp,
     )
     log_metrics(run, metrics)
 

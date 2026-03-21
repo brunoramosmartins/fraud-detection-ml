@@ -75,7 +75,7 @@ The low optimal threshold reflects two structural properties of the problem: (1)
 | Precision at threshold | 0.101 | 10.1% of flagged transactions are real fraud |
 | FPR at threshold | 0.259 | 25.9% of legitimate transactions are flagged |
 
-Note: in `src/models/metrics.py`, the stored metric `fdr` is `TP/(TP+FP)` — precision, not recall. The naming follows domain convention where "Fraud Detection Rate" refers to the density of fraud in the alert queue.
+Note: in `src/models/metrics.py`, the stored metric `precision` is `TP/(TP+FP)` — the fraction of flagged transactions that are actual fraud.
 
 ---
 
