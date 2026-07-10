@@ -232,3 +232,96 @@ def normalize_d_columns(
     for col in d_cols:
         out[f"{col}_norm"] = (df[col] - days).astype("float32")
     return out
+
+
+def make_uid(
+    df: pd.DataFrame,
+    card_col: str = "card1",
+    addr_col: str = "addr1",
+    dt_col: str = "TransactionDT",
+    d1_col: str = "D1",
+) -> pd.Series:
+    """Build a pseudo-client key (the IEEE-CIS "magic feature", EXP-004).
+
+    Identifies the card/account behind a transaction by combining the card
+    id, the billing region, and an inferred account-start day. ``D1`` is
+    "days since the card began"; subtracting it from the transaction day
+    yields a value that is (approximately) constant for all transactions of
+    the same card:
+
+    ``uid = card1 "_" addr1 "_" round(TransactionDT/86400 - D1)``
+
+    Args:
+        df: Frame containing the source columns.
+        card_col, addr_col, dt_col, d1_col: Column names.
+
+    Returns:
+        Plain-string series (object dtype) aligned with ``df``. Each missing
+        component is rendered as the literal token ``"NA"`` so the key is
+        never null: un-identifiable transactions group by whichever
+        components they do have, rather than propagating a missing value or
+        fabricating spurious matches.
+
+    Leakage argument:
+        Row-local: every component (card1, addr1, TransactionDT, D1) belongs
+        to the *same* transaction, so the key uses no other rows and no
+        future information. ``TransactionDT/86400 - D1`` cancels absolute
+        time, giving a stable per-account reference day computable at
+        scoring time from the transaction's own fields. See
+        ``exercises/ex03_leakage_and_validation.md`` for the formal argument.
+    """
+    day = (df[dt_col] / 86400.0).round()
+    ref = (day - df[d1_col]).round().astype("Int64").astype("string").fillna("NA")
+    card = df[card_col].astype("Int64").astype("string").fillna("NA")
+    addr = df[addr_col].astype("Int64").astype("string").fillna("NA")
+    return (card + "_" + addr + "_" + ref).astype("object")
+
+
+def add_uid_aggregates(
+    df: pd.DataFrame,
+    uid: pd.Series,
+    amount_col: str = "TransactionAmt",
+) -> pd.DataFrame:
+    """Per-UID distributional aggregates (EXP-004).
+
+    Args:
+        df: Frame the aggregates are computed over. The caller passes the
+            **union of train and test** so a UID seen in both periods gets
+            one consistent profile (this is transductive but label-free).
+        uid: UID key aligned with ``df`` (from :func:`make_uid`).
+        amount_col: Transaction amount column.
+
+    Returns:
+        DataFrame indexed like ``df`` with float32 columns: ``uid_count``
+        (transactions per UID), ``uid_amt_mean``, ``uid_amt_std`` (0 for
+        singletons), and ``uid_amt_ratio`` (this amount / the UID mean —
+        flags amounts unusual for the account).
+
+    Leakage argument:
+        The aggregates are **label-free** distributional summaries (counts
+        and amount moments); no ``isFraud`` value enters them, so computing
+        them over the train+test union leaks no target information. It is
+        transductive, not temporal leakage: the test transactions are known
+        at scoring time (batch scoring), and the private leaderboard - a
+        disjoint, later time slice - acts as an independent leak detector
+        (a label leak would inflate the public LB and collapse the private
+        LB). A real-time serving variant, which cannot see the full union,
+        is treated separately in ADR-006.
+    """
+    work = pd.DataFrame({"uid": uid.to_numpy(), "amt": df[amount_col].to_numpy()})
+    grp = work.groupby("uid")["amt"]
+    count = grp.transform("count")
+    mean = grp.transform("mean")
+    std = grp.transform("std").fillna(0.0)
+    out = pd.DataFrame(
+        {
+            "uid_count": count.astype("float32").to_numpy(),
+            "uid_amt_mean": mean.astype("float32").to_numpy(),
+            "uid_amt_std": std.astype("float32").to_numpy(),
+            "uid_amt_ratio": (work["amt"] / mean.replace(0.0, np.nan))
+            .astype("float32")
+            .to_numpy(),
+        },
+        index=df.index,
+    )
+    return out

@@ -65,11 +65,11 @@ the expected result; the actual result is filled in afterwards. Protocol:
 | Feature diff | + **label encoding** of every object-dtype column (~31: ProductCD, card4/card6, P_/R_emaildomain, M1–M9, object-typed id_12–id_38, DeviceType, DeviceInfo), missing as its own category, unseen → −1; + **frequency encoding** (train-fit, normalized) of the same object columns plus the numeric-coded high-cardinality categoricals card1, card2, card3, card5, addr1, addr2; + **email provider/suffix split** of P_/R_emaildomain (4 derived columns, label- and frequency-encoded). Canonical implementations: `src/features/engineering.py`. Model and params unchanged from EXP-001. |
 | Config | LightGBM identical to EXP-001 (registered params, seed 42). Encoders fit on each fold's training months (Scheme B) and on the train partition (Scheme A model + submission) — never on scored rows. |
 | Expected | H2 threshold: private LB ΔAUC ≥ +0.020 vs EXP-001 (private ≥ 0.9077); DeLong on holdout significant. Given H1's drift-decay finding, internal Δ is expected to exceed LB Δ: registered guess holdout Δ +0.025 to +0.040. |
-| A (holdout AUC) | *(pending — paste summary block from notebook output)* |
-| B (GroupKFold) | *(pending — paste summary block from notebook output)* |
-| DeLong vs EXP-001 | *(pending — paste summary block from notebook output)* |
+| A (holdout AUC) | **0.9257** |
+| B (GroupKFold) | **0.9398 ± 0.0109** — per-fold: [0.9181, 0.9400, 0.9456, 0.9401, 0.9515, 0.9321, 0.9514] |
+| DeLong vs EXP-001 | ΔAUC **+0.0133** [95% CI +0.0109, +0.0156], z = 10.90, p = 1.1e-27 — significant, predicted direction |
 | LB public / private | **0.9251 / 0.8968** (SUB-003, 2026-07-10) |
-| Verdict / notes | *(preliminary, internals pending)* External evidence: private Δ = **+0.0091** < +0.020 threshold (criterion b failed) AND smaller than H1's realized model-swap gain (+0.0128 private, +0.0238 public vs +0.0116 public here) — the comparative core of H2 ("categoricals outgain the model swap") fails externally in both test periods. Final verdict (inconclusive vs rejected) awaits the internal DeLong result. Note: 0.8968 private is still the series best — the block helps, just less than pre-registered. |
+| Verdict / notes | **H2: INCONCLUSIVE** by the pre-registered rule (internal DeLong significant & positive, but private LB Δ = +0.0091 < +0.020 threshold — criteria disagree). **The comparative core of H2 is refuted:** categoricals gained *less* than the H1 model swap on both scales — internal holdout +0.0133 (vs H1 +0.0510) and private LB +0.0091 (vs H1 +0.0128). The block does add internally-significant signal and 0.8968 was the series best at the time, but it is not the bigger lever H2 predicted. H4 gaps: \|A−private\| = 0.0289, \|B−private\| = 0.0430 (temporal split closer again). |
 
 ---
 
@@ -86,6 +86,25 @@ the expected result; the actual result is filled in afterwards. Protocol:
 | Expected | Holdout Δ +0.005 to +0.015 vs EXP-002; the D-normalization should specifically shrink the CV−LB gap (anti-drift transform) — watch the H4 gap metrics. |
 | A (holdout AUC) | **0.9296** |
 | B (GroupKFold) | **0.9428 ± 0.0106** — per-fold: [0.9215, 0.9485, 0.9498, 0.9436, 0.9551, 0.9339, 0.9469] |
-| DeLong vs EXP-002 | *(computed locally from holdout artifacts once EXP-002 is re-run)* |
-| LB public / private | *(pending — first run aborted at the in-notebook DeLong cell before writing submission.csv; re-run with streamlined notebook)* |
-| Verdict / notes | Holdout +0.017 over EXP-001 (0.9124), a solid exploratory gain even though EXP-002's holdout is not yet recovered. Feature count 418 numeric+row-local. **Process change:** the in-notebook DeLong step (which read the predecessor's holdout artifact) was the recurring failure point — it aborted the run before submission.csv was written. Notebooks are now modeling-only (train → save holdout_pred + submission → print summary); DeLong is computed off-notebook with the tested `src/models/delong.py` from downloaded holdout artifacts. |
+| DeLong vs EXP-002 | ΔAUC **+0.0039** [95% CI +0.0019, +0.0059], z = 3.85, p = 1.2e-04 — significant, positive |
+| LB public / private | **0.9284 / 0.8998** (SUB-004, 2026-07-10) |
+| Verdict / notes | Exploratory (no hypothesis). Small but internally-significant gain (+0.0039 holdout, +0.0030 private over EXP-002); private 0.8998 is the series best. The time/amount/D-norm block helps modestly. H4 gaps: \|A−private\| = 0.0298, \|B−private\| = 0.0430 (temporal split closer, 3rd time). Notebook was modeling-only (the new pattern); DeLong computed off-notebook via `scripts/kaggle_delong.py`. Feature count 418 numeric+row-local + categorical block. |
+
+---
+
+## EXP-004 — H3: UID entity aggregation
+
+| Field | Value |
+|---|---|
+| Registered | 2026-07-10 (before running) |
+| Hypothesis | **H3** |
+| Notebook | `notebooks/kaggle/k04_uid_aggregations/` |
+| Predecessor | EXP-003 |
+| Feature diff | + **UID key** `card1 "_" addr1 "_" round(TransactionDT/86400 − D1)` (pseudo-client id), frequency-encoded; + **per-UID aggregates** computed over the train+test union (label-free, transductive): `uid_count`, `uid_amt_mean`, `uid_amt_std`, `uid_amt_ratio`. Canonical implementations: `src/features/engineering.py` (`make_uid`, `add_uid_aggregates`). Model and params unchanged. |
+| Config | LightGBM identical to EXP-001..003 (registered params, seed 42). UID aggregates fit over the full union once (no label); categorical encoders keep the per-fit discipline. |
+| Expected | H3 threshold: private LB ΔAUC ≥ +0.015 vs EXP-003 (private ≥ 0.9148) **and** private ≥ 0.93. Given the H1/H2 drift-decay pattern, the internal holdout Δ is expected to be substantially larger than the private Δ. This is the block that decided the 2019 competition, so a large internal jump is expected regardless of the LB verdict. |
+| A (holdout AUC) | *(pending)* |
+| B (GroupKFold) | *(pending)* |
+| DeLong vs EXP-003 | *(pending — off-notebook)* |
+| LB public / private | *(pending — see SUB-005)* |
+| Verdict / notes | *(pending)* |

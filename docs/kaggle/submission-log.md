@@ -9,8 +9,9 @@ scores but no leaderboard rank; percentile equivalences reference the frozen
 |---|---|---|---|---|---|---|---|---|---|
 | SUB-001 | 2026-07-10 | EXP-000 | `k00_baseline_submission` @ *(commit)* | v1 numeric-only, fillna(0), sklearn GB | 0.8614 | exempt | 0.83–0.86 | **0.8896** | **0.8749** |
 | SUB-002 | 2026-07-10 | EXP-001 | `k01_lgbm_numeric` @ *(commit)* | v1 numeric-only, native NaN, LightGBM | 0.9124 | 0.9296 ± 0.0127 | private ≥ 0.890 (H1: +0.015 over SUB-001) | **0.9134** | **0.8877** |
-| SUB-003 | 2026-07-10 | EXP-002 | `k02_categoricals` @ *(commit)* | v2a: + categorical encodings (label + freq + email split) | *(paste from notebook)* | *(paste from notebook)* | private ≥ 0.9077 (H2: +0.020 over SUB-002) | **0.9251** | **0.8968** |
-| SUB-004 | *(pending)* | EXP-003 | `k03_time_amount` @ *(commit)* | v2b: + time/amount/D-norm (exploratory) | *(pending)* | *(pending)* | private ~0.90 (exploratory, +0.005 a +0.015) | *(pending)* | *(pending)* |
+| SUB-003 | 2026-07-10 | EXP-002 | `k02_categoricals` @ *(commit)* | v2a: + categorical encodings (label + freq + email split) | 0.9257 | 0.9398 ± 0.0109 | private ≥ 0.9077 (H2: +0.020 over SUB-002) | **0.9251** | **0.8968** |
+| SUB-004 | 2026-07-10 | EXP-003 | `k03_time_amount` @ *(commit)* | v2b: + time/amount/D-norm (exploratory) | 0.9296 | 0.9428 ± 0.0106 | private ~0.90 (exploratory, +0.005 a +0.015) | **0.9284** | **0.8998** |
+| SUB-005 | *(pending)* | EXP-004 | `k04_uid_aggregations` @ *(commit)* | v2c: + UID key + per-UID aggregates | *(pending)* | *(pending)* | private ≥ 0.9148 and ≥ 0.93 (H3: +0.015 over SUB-004) | *(pending)* | *(pending)* |
 
 ## Submission command (author executes)
 

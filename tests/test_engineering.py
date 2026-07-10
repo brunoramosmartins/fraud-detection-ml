@@ -8,9 +8,11 @@ from src.features.engineering import (
     MISSING_TOKEN,
     add_amount_features,
     add_time_features,
+    add_uid_aggregates,
     build_categorical_block,
     frequency_encode,
     label_encode,
+    make_uid,
     normalize_d_columns,
     split_email_domain,
 )
@@ -40,7 +42,7 @@ class TestFrequencyEncode:
     def test_scoring_distribution_does_not_affect_encoding(self, train_col):
         skewed = pd.Series(["c"] * 100)
         encoded = frequency_encode(train_col, skewed)
-        assert (encoded == pytest.approx(1 / 8)).all()
+        assert encoded.to_numpy() == pytest.approx(1 / 8)
 
     def test_dtype_is_float32(self, train_col):
         assert frequency_encode(train_col, train_col).dtype == np.float32
@@ -170,3 +172,78 @@ class TestNormalizeDColumns:
         df = pd.DataFrame({"D1": [1.0], "D4": [2.0]})
         out = normalize_d_columns(df, pd.Series([0]), ["D1", "D4"])
         assert list(out.columns) == ["D1_norm", "D4_norm"]
+
+
+class TestMakeUid:
+    def test_same_account_gets_same_uid(self):
+        # Same card1/addr1; two transactions 5 days apart with D1 rising by 5
+        # -> identical account-start day -> identical UID.
+        df = pd.DataFrame(
+            {
+                "card1": [1000, 1000],
+                "addr1": [200, 200],
+                "TransactionDT": [10 * 86400, 15 * 86400],
+                "D1": [3.0, 8.0],
+            }
+        )
+        uid = make_uid(df)
+        assert uid.iloc[0] == uid.iloc[1]
+
+    def test_different_card_differs(self):
+        df = pd.DataFrame(
+            {
+                "card1": [1000, 2000],
+                "addr1": [200, 200],
+                "TransactionDT": [10 * 86400, 10 * 86400],
+                "D1": [3.0, 3.0],
+            }
+        )
+        uid = make_uid(df)
+        assert uid.iloc[0] != uid.iloc[1]
+
+    def test_missing_component_does_not_crash(self):
+        df = pd.DataFrame(
+            {
+                "card1": [1000, np.nan],
+                "addr1": [200, 200],
+                "TransactionDT": [10 * 86400, 10 * 86400],
+                "D1": [3.0, np.nan],
+            }
+        )
+        uid = make_uid(df)
+        assert len(uid) == 2
+        assert uid.iloc[0] != uid.iloc[1]
+
+
+class TestAddUidAggregates:
+    def test_count_and_mean(self):
+        df = pd.DataFrame({"TransactionAmt": [100.0, 300.0, 50.0]})
+        uid = pd.Series(["a", "a", "b"])
+        out = add_uid_aggregates(df, uid)
+        assert out["uid_count"].tolist() == [2.0, 2.0, 1.0]
+        assert out["uid_amt_mean"].iloc[0] == pytest.approx(200.0)
+        assert out["uid_amt_mean"].iloc[2] == pytest.approx(50.0)
+
+    def test_singleton_std_is_zero(self):
+        df = pd.DataFrame({"TransactionAmt": [50.0]})
+        out = add_uid_aggregates(df, pd.Series(["b"]))
+        assert out["uid_amt_std"].iloc[0] == 0.0
+
+    def test_amount_ratio(self):
+        df = pd.DataFrame({"TransactionAmt": [100.0, 300.0]})
+        out = add_uid_aggregates(df, pd.Series(["a", "a"]))
+        # mean = 200 -> ratios 0.5 and 1.5
+        assert out["uid_amt_ratio"].iloc[0] == pytest.approx(0.5)
+        assert out["uid_amt_ratio"].iloc[1] == pytest.approx(1.5)
+
+    def test_index_preserved(self):
+        df = pd.DataFrame({"TransactionAmt": [1.0, 2.0]}, index=[7, 9])
+        out = add_uid_aggregates(df, pd.Series(["a", "a"], index=[7, 9]))
+        assert list(out.index) == [7, 9]
+
+    def test_no_label_column_used(self):
+        # Aggregates must be identical whether or not a label column exists.
+        df = pd.DataFrame({"TransactionAmt": [10.0, 20.0], "isFraud": [1, 0]})
+        uid = pd.Series(["a", "a"])
+        out = add_uid_aggregates(df, uid)
+        assert out["uid_amt_mean"].tolist() == [15.0, 15.0]

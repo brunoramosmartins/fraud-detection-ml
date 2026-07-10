@@ -41,7 +41,7 @@ agree against the prediction, **rejected**. A null finding is a finding.
 | ID | Statement | Test | Threshold | Verdict |
 |---|---|---|---|---|
 | **H1** | Swapping sklearn GB → LightGBM on the *same* numeric-only feature set, with native NaN handling replacing `fillna(0)`, improves private LB AUC. Isolates model class + imputation; no new signal. | EXP-001 vs EXP-000 | ΔAUC ≥ +0.015 (private LB) | **INCONCLUSIVE** (leaning supported) |
-| **H2** | Restoring the dropped categorical features (frequency + label encoding) yields a larger gain than the H1 model swap did. | EXP-002 vs EXP-001 | ΔAUC ≥ +0.020 (private LB) | *(pending)* |
+| **H2** | Restoring the dropped categorical features (frequency + label encoding) yields a larger gain than the H1 model swap did. | EXP-002 vs EXP-001 | ΔAUC ≥ +0.020 (private LB) | **INCONCLUSIVE** (comparative claim refuted) |
 | **H3** | UID entity aggregation (pseudo-client key `card1 + addr1 + floor(TransactionDT/86400 − D1)` plus per-UID aggregates) is the single largest block, lifting private LB to ≥ 0.93. | EXP-004 vs EXP-003 | ΔAUC ≥ +0.015 and private LB ≥ 0.93 | *(pending)* |
 | **H4** | Month-wise GroupKFold CV predicts the private LB better than the single temporal 80/20 split: its mean absolute (CV − private LB) gap is strictly smaller across EXP-001..004. | Gap comparison over EXP-001..004 (both schemes recorded on every run) | mean abs gap (GroupKFold) < mean abs gap (temporal split) | *(pending)* |
 
@@ -83,6 +83,43 @@ threshold implicitly assumed internal gains transfer 1:1 to the private LB;
 they do not under drift. Later hypotheses keep their registered thresholds
 (changing thresholds after seeing data would defeat pre-registration), but
 this decay pattern is itself a pre-specified quantity tracked for H4.
+
+### H2 — INCONCLUSIVE (comparative claim refuted) — 2026-07-10
+
+Evidence (EXP-002 vs EXP-001; SUB-003 vs SUB-002):
+
+- Internal (Scheme A holdout): ΔAUC **+0.0133** [95% CI +0.0109, +0.0156],
+  DeLong z = 10.90, **p = 1.1e-27** — criterion (a) met (significant, positive).
+- External: private LB Δ = **+0.0091** (0.8968 vs 0.8877) — positive but
+  **below** the +0.020 threshold; criterion (b) not met.
+- Rule applied: (a) and (b) disagree → inconclusive.
+
+Substantive reading: the categorical block adds genuine, internally-significant
+signal (and gave the series-best private LB at the time), but it is **not the
+bigger lever** H2 predicted. Categoricals gained *less* than the H1 model swap
+on both scales — internal +0.0133 vs +0.0510, private +0.0091 vs +0.0128. The
+comparative core of H2 is therefore refuted, even though the strict verdict is
+inconclusive. The same drift-decay pattern from H1 recurs: internal +0.0133
+shrinks to private +0.0091.
+
+### H4 — running gap data (final verdict after EXP-004)
+
+Per-experiment absolute gap between each CV scheme's estimate and the private
+LB (smaller = better predictor of the external score):
+
+| Exp | Scheme A holdout | Scheme B GroupKFold | Private LB | \|A−LB\| | \|B−LB\| |
+|---|---|---|---|---|---|
+| EXP-001 | 0.9124 | 0.9296 | 0.8877 | **0.0247** | 0.0419 |
+| EXP-002 | 0.9257 | 0.9398 | 0.8968 | **0.0289** | 0.0430 |
+| EXP-003 | 0.9296 | 0.9428 | 0.8998 | **0.0298** | 0.0430 |
+| mean | | | | **0.0278** | 0.0426 |
+
+Trend so far (3/3): the single **temporal split is the closer predictor of the
+private LB**, not GroupKFold — the *opposite* of H4's prediction. Mechanism:
+the temporal holdout is the most-recent train slice, structurally nearest the
+(future) test set; GroupKFold averages over all months including easier early
+ones, inflating its estimate. H4 is trending toward **rejected**; final verdict
+recorded after EXP-004 completes the EXP-001..004 scope.
 
 ## Answer to the Research Question
 
