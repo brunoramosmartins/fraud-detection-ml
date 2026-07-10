@@ -40,7 +40,7 @@ agree against the prediction, **rejected**. A null finding is a finding.
 
 | ID | Statement | Test | Threshold | Verdict |
 |---|---|---|---|---|
-| **H1** | Swapping sklearn GB → LightGBM on the *same* numeric-only feature set, with native NaN handling replacing `fillna(0)`, improves private LB AUC. Isolates model class + imputation; no new signal. | EXP-001 vs EXP-000 | ΔAUC ≥ +0.015 (private LB) | *(pending)* |
+| **H1** | Swapping sklearn GB → LightGBM on the *same* numeric-only feature set, with native NaN handling replacing `fillna(0)`, improves private LB AUC. Isolates model class + imputation; no new signal. | EXP-001 vs EXP-000 | ΔAUC ≥ +0.015 (private LB) | **INCONCLUSIVE** (leaning supported) |
 | **H2** | Restoring the dropped categorical features (frequency + label encoding) yields a larger gain than the H1 model swap did. | EXP-002 vs EXP-001 | ΔAUC ≥ +0.020 (private LB) | *(pending)* |
 | **H3** | UID entity aggregation (pseudo-client key `card1 + addr1 + floor(TransactionDT/86400 − D1)` plus per-UID aggregates) is the single largest block, lifting private LB to ≥ 0.93. | EXP-004 vs EXP-003 | ΔAUC ≥ +0.015 and private LB ≥ 0.93 | *(pending)* |
 | **H4** | Month-wise GroupKFold CV predicts the private LB better than the single temporal 80/20 split: its mean absolute (CV − private LB) gap is strictly smaller across EXP-001..004. | Gap comparison over EXP-001..004 (both schemes recorded on every run) | mean abs gap (GroupKFold) < mean abs gap (temporal split) | *(pending)* |
@@ -65,8 +65,24 @@ frozen-LB medal-zone equivalence from the 2019 competition write-ups.
 
 ## Verdicts
 
-*(filled as experiments complete; each verdict cites the DeLong p-value, the
-ΔAUC with CI, and the submission-log entries involved)*
+### H1 — INCONCLUSIVE (leaning supported) — 2026-07-10
+
+Evidence (EXP-001 vs EXP-000; SUB-002 vs SUB-001):
+
+- Internal (Scheme A holdout, n = 118,108): ΔAUC **+0.0510** [95% CI +0.0461,
+  +0.0558], DeLong z = 20.57, **p = 4.7e-94** — criterion (a) met decisively.
+- External: private LB Δ = **+0.0128** (0.8877 vs 0.8749) — positive direction
+  but **below** the pre-registered +0.015 threshold; criterion (b) not met.
+  Public LB Δ = +0.0238 would have met it.
+- Rule applied: (a) and (b) disagree → inconclusive.
+
+Substantive finding: the model-class improvement **decays with temporal
+distance** from the training window — holdout (+0.051) → public LB, early
+test period (+0.024) → private LB, late test period (+0.013). The registered
+threshold implicitly assumed internal gains transfer 1:1 to the private LB;
+they do not under drift. Later hypotheses keep their registered thresholds
+(changing thresholds after seeing data would defeat pre-registration), but
+this decay pattern is itself a pre-specified quantity tracked for H4.
 
 ## Answer to the Research Question
 

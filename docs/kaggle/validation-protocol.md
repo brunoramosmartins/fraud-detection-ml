@@ -25,7 +25,11 @@ require a new version section here and invalidate cross-version comparisons.
 ### Scheme B — Month-wise GroupKFold
 
 - Month index: `DT_M = floor(TransactionDT / (86400 * 30.44))` (≈ calendar
-  months; the train set spans ~6 months → **6 folds**, leave-one-month-out).
+  months), leave-one-month-out.
+- **Amendment (2026-07-10, EXP-001):** the bucketing yields **7** month groups
+  in practice (DT_M 0–6), not the 6 estimated when this protocol was written.
+  Fold count follows the data: 7 folds. Recorded before any cross-experiment
+  Scheme B comparison existed; applies uniformly to all experiments.
 - Group = `DT_M`; no shuffling; every fold trains on the remaining months.
 - Report per-fold AUC and mean ± std. Early stopping, when used, is fit
   per-fold on the fold's own validation month.
