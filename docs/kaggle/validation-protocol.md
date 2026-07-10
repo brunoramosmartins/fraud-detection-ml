@@ -56,13 +56,23 @@ sklearn GB makes 6 extra fits prohibitive (the cost ADR-007 removes).
 
 ### DeLong procedure
 
-1. Both experiments score the *same* Scheme-A holdout rows (predictions saved
-   as notebook artifacts).
-2. `src/models/delong.py::delong_roc_test(y_true, scores_new, scores_old)`
+1. Each experiment's notebook saves its Scheme-A holdout predictions as
+   `holdout_pred_expNNN.csv` (`TransactionID, y_true, score`).
+2. DeLong is computed **off-notebook** (locally) from the two holdout
+   artifacts, aligned by `TransactionID`, using the tested module
+   `src/models/delong.py::delong_roc_test(y_true, scores_new, scores_old)`
    → ΔAUC, 95% CI, z, two-sided p-value.
 3. Significance level α = 0.05, two-sided. No correction within H1–H3 (each
    hypothesis is a single pre-registered comparison); any post-hoc exploratory
    comparison must be labeled as such.
+
+**Why off-notebook (amended 2026-07-10, EXP-003):** an earlier design ran the
+DeLong step *inside* the submission notebook, reading the predecessor's holdout
+artifact via an attached kernel source. The kernel-attach step failed
+intermittently and, worse, aborted the run *before* `submission.csv` was
+written — wasting the full training time. Submission notebooks are now
+modeling-only; the DeLong comparison is a separate local step over the
+downloaded holdout artifacts, using the same tested module.
 
 ### Submission discipline
 

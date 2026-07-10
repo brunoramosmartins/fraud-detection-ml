@@ -84,8 +84,8 @@ the expected result; the actual result is filled in afterwards. Protocol:
 | Feature diff | + `tx_hour`, `tx_dow` (periodic only — no absolute time index, to avoid trend extrapolation); + `amt_log1p`, `amt_cents` (foreign-currency cent signal); + `D{1..15}_norm` except D9 (D − day, converting timedelta counters to time-invariant reference dates; originals kept). All row-local, leak-free by construction. Canonical implementations: `src/features/engineering.py`. Model and params unchanged. |
 | Config | LightGBM identical to EXP-001/002 (registered params, seed 42). Row-local block needs no fit/transform boundary. |
 | Expected | Holdout Δ +0.005 to +0.015 vs EXP-002; the D-normalization should specifically shrink the CV−LB gap (anti-drift transform) — watch the H4 gap metrics. |
-| A (holdout AUC) | *(pending)* |
-| B (GroupKFold) | *(pending)* |
-| DeLong vs EXP-002 | *(pending)* |
-| LB public / private | *(pending — see SUB-004)* |
-| Verdict / notes | *(pending)* |
+| A (holdout AUC) | **0.9296** |
+| B (GroupKFold) | **0.9428 ± 0.0106** — per-fold: [0.9215, 0.9485, 0.9498, 0.9436, 0.9551, 0.9339, 0.9469] |
+| DeLong vs EXP-002 | *(computed locally from holdout artifacts once EXP-002 is re-run)* |
+| LB public / private | *(pending — first run aborted at the in-notebook DeLong cell before writing submission.csv; re-run with streamlined notebook)* |
+| Verdict / notes | Holdout +0.017 over EXP-001 (0.9124), a solid exploratory gain even though EXP-002's holdout is not yet recovered. Feature count 418 numeric+row-local. **Process change:** the in-notebook DeLong step (which read the predecessor's holdout artifact) was the recurring failure point — it aborted the run before submission.csv was written. Notebooks are now modeling-only (train → save holdout_pred + submission → print summary); DeLong is computed off-notebook with the tested `src/models/delong.py` from downloaded holdout artifacts. |
