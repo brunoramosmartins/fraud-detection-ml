@@ -89,3 +89,4 @@ artifacts/monitoring/
 dist/
 build/
 *.egg-info/
+.coverage
