@@ -27,11 +27,11 @@ the expected result; the actual result is filled in afterwards. Protocol:
 | Feature diff | — faithful reproduction of the production pipeline: 380 numeric-only features, `fillna(0)`, sklearn GB (80 trees, depth 5, lr 0.1, min_samples_leaf 100, subsample 0.8, seed 42), trained on Scheme-A train partition only |
 | Config | `configs/model_gb_v1.yml` equivalents, hardcoded in notebook for reproducibility |
 | Expected | Scheme-A holdout AUC ≈ 0.861 (reproduction check, tolerance ±0.003); private LB expected *below* holdout (temporal drift + one-month gap in test period), rough guess 0.83–0.86 |
-| A (holdout AUC) | *(pending)* |
-| B (GroupKFold) | *(pending)* |
+| A (holdout AUC) | **0.8614** — reproduction check PASSED (expected 0.861 ± 0.003) |
+| B (GroupKFold) | exempt (see protocol) |
 | DeLong | — (no predecessor) |
 | LB public / private | *(pending — see SUB-001)* |
-| Verdict / notes | *(pending)* |
+| Verdict / notes | Fit time 16.2 min on Kaggle CPU. Kaggle env inferred 400 numeric features vs 380 documented locally (pandas dtype-inference difference across versions); holdout AUC matched regardless, so the pipelines are functionally equivalent. Data mounts at `/kaggle/input/competitions/ieee-fraud-detection` (new layout) — notebook locates files by search. Holdout predictions saved as `holdout_pred_exp000.csv` for the EXP-001 DeLong test. |
 
 ---
 
