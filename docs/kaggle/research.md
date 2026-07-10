@@ -42,8 +42,8 @@ agree against the prediction, **rejected**. A null finding is a finding.
 |---|---|---|---|---|
 | **H1** | Swapping sklearn GB → LightGBM on the *same* numeric-only feature set, with native NaN handling replacing `fillna(0)`, improves private LB AUC. Isolates model class + imputation; no new signal. | EXP-001 vs EXP-000 | ΔAUC ≥ +0.015 (private LB) | **INCONCLUSIVE** (leaning supported) |
 | **H2** | Restoring the dropped categorical features (frequency + label encoding) yields a larger gain than the H1 model swap did. | EXP-002 vs EXP-001 | ΔAUC ≥ +0.020 (private LB) | **INCONCLUSIVE** (comparative claim refuted) |
-| **H3** | UID entity aggregation (pseudo-client key `card1 + addr1 + floor(TransactionDT/86400 − D1)` plus per-UID aggregates) is the single largest block, lifting private LB to ≥ 0.93. | EXP-004 vs EXP-003 | ΔAUC ≥ +0.015 and private LB ≥ 0.93 | *(pending)* |
-| **H4** | Month-wise GroupKFold CV predicts the private LB better than the single temporal 80/20 split: its mean absolute (CV − private LB) gap is strictly smaller across EXP-001..004. | Gap comparison over EXP-001..004 (both schemes recorded on every run) | mean abs gap (GroupKFold) < mean abs gap (temporal split) | *(pending)* |
+| **H3** | UID entity aggregation (pseudo-client key `card1 + addr1 + floor(TransactionDT/86400 − D1)` plus per-UID aggregates) is the single largest block, lifting private LB to ≥ 0.93. | EXP-004 vs EXP-003 | ΔAUC ≥ +0.015 and private LB ≥ 0.93 | **REJECTED** |
+| **H4** | Month-wise GroupKFold CV predicts the private LB better than the single temporal 80/20 split: its mean absolute (CV − private LB) gap is strictly smaller across EXP-001..004. | Gap comparison over EXP-001..004 (both schemes recorded on every run) | mean abs gap (GroupKFold) < mean abs gap (temporal split) | **REJECTED** (opposite held, 4/4) |
 
 Rationale for thresholds: H1/H3 thresholds (+0.015) sit well above the minimum
 detectable ΔAUC on a ~118k-row holdout with 3.5% positives (derived in
@@ -102,7 +102,27 @@ comparative core of H2 is therefore refuted, even though the strict verdict is
 inconclusive. The same drift-decay pattern from H1 recurs: internal +0.0133
 shrinks to private +0.0091.
 
-### H4 — running gap data (final verdict after EXP-004)
+### H3 — REJECTED — 2026-07-10
+
+Evidence (EXP-004 vs EXP-003; SUB-005 vs SUB-004):
+
+- Internal (Scheme A holdout): ΔAUC **+0.0004** [95% CI −0.0012, +0.0020],
+  DeLong z = 0.45, **p = 0.65 — not significant** (indistinguishable from zero).
+- External: private LB Δ = **+0.0034** (0.9032 vs 0.8998) — far below the
+  +0.015 threshold; private 0.9032 **< 0.93**. Both external conditions fail.
+- Rule: both criteria against the prediction → **rejected**.
+
+Substantive reading: the pre-registered UID block (a 4-aggregate key: count,
+amount mean/std/ratio + frequency-encoded UID) is **not the dominant lever**
+H3 claimed. The 2019 winning solutions' "magic feature" jump came from *rich*
+per-UID aggregation (nunique of many categoricals, per-UID D-column statistics,
+dozens of engineered columns) — not the entity key alone. The minimal block
+here adds series-best LB numbers (private 0.9032, GroupKFold +0.0047) but its
+effect on the recent-slice holdout is statistically zero. A richer-aggregation
+retry is the natural EXP-005 direction (no new hypothesis — H3 as stated is
+settled).
+
+### H4 — REJECTED — 2026-07-10
 
 Per-experiment absolute gap between each CV scheme's estimate and the private
 LB (smaller = better predictor of the external score):
@@ -112,14 +132,20 @@ LB (smaller = better predictor of the external score):
 | EXP-001 | 0.9124 | 0.9296 | 0.8877 | **0.0247** | 0.0419 |
 | EXP-002 | 0.9257 | 0.9398 | 0.8968 | **0.0289** | 0.0430 |
 | EXP-003 | 0.9296 | 0.9428 | 0.8998 | **0.0298** | 0.0430 |
-| mean | | | | **0.0278** | 0.0426 |
+| EXP-004 | 0.9299 | 0.9475 | 0.9032 | **0.0267** | 0.0443 |
+| mean | | | | **0.0275** | 0.0431 |
 
-Trend so far (3/3): the single **temporal split is the closer predictor of the
-private LB**, not GroupKFold — the *opposite* of H4's prediction. Mechanism:
-the temporal holdout is the most-recent train slice, structurally nearest the
-(future) test set; GroupKFold averages over all months including easier early
-ones, inflating its estimate. H4 is trending toward **rejected**; final verdict
-recorded after EXP-004 completes the EXP-001..004 scope.
+H4 predicted GroupKFold would be the *closer* predictor of the private LB. The
+**opposite held in all 4 experiments**: the single temporal split is uniformly
+closer (mean gap 0.0275 vs 0.0431). H4 is **rejected** on its pre-registered
+metric. Caveat: with 4 paired points a formal sign test (4/4 same direction)
+gives p = 0.125, not significant at α=0.05 — but the direction is unanimous and
+the magnitude substantial (~0.016 mean gap difference). Mechanism: the temporal
+holdout is the most-recent train slice, structurally nearest the future test
+set; GroupKFold averages over all months including easier early ones, inflating
+its estimate. **Practical takeaway:** for a temporally-drifting deployment, the
+"naive" most-recent-slice holdout is the more honest model-selection signal than
+the more elaborate month-wise GroupKFold.
 
 ## Answer to the Research Question
 

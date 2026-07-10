@@ -103,8 +103,8 @@ the expected result; the actual result is filled in afterwards. Protocol:
 | Feature diff | + **UID key** `card1 "_" addr1 "_" round(TransactionDT/86400 − D1)` (pseudo-client id), frequency-encoded; + **per-UID aggregates** computed over the train+test union (label-free, transductive): `uid_count`, `uid_amt_mean`, `uid_amt_std`, `uid_amt_ratio`. Canonical implementations: `src/features/engineering.py` (`make_uid`, `add_uid_aggregates`). Model and params unchanged. |
 | Config | LightGBM identical to EXP-001..003 (registered params, seed 42). UID aggregates fit over the full union once (no label); categorical encoders keep the per-fit discipline. |
 | Expected | H3 threshold: private LB ΔAUC ≥ +0.015 vs EXP-003 (private ≥ 0.9148) **and** private ≥ 0.93. Given the H1/H2 drift-decay pattern, the internal holdout Δ is expected to be substantially larger than the private Δ. This is the block that decided the 2019 competition, so a large internal jump is expected regardless of the LB verdict. |
-| A (holdout AUC) | *(pending)* |
-| B (GroupKFold) | *(pending)* |
-| DeLong vs EXP-003 | *(pending — off-notebook)* |
-| LB public / private | *(pending — see SUB-005)* |
-| Verdict / notes | *(pending)* |
+| A (holdout AUC) | **0.9299** |
+| B (GroupKFold) | **0.9475 ± 0.0124** — per-fold: [0.9222, 0.9518, 0.9522, 0.9452, 0.9575, 0.9404, 0.9629] |
+| DeLong vs EXP-003 | ΔAUC **+0.0004** [95% CI −0.0012, +0.0020], z = 0.45, **p = 0.65 — NOT significant** |
+| LB public / private | **0.9314 / 0.9032** (SUB-005, 2026-07-10) |
+| Verdict / notes | **H3: REJECTED.** Both criteria fail: internal DeLong is *not significant* (Δ +0.0004, p = 0.65 — indistinguishable from zero on the Scheme-A holdout) AND private LB Δ = +0.0034 << +0.015 threshold, with private 0.9032 < 0.93. Per the rule (both criteria against the prediction → rejected). **Interpretation:** the famous "magic feature" is not magic *in this minimal form* — a 4-aggregate UID (count, amt mean/std/ratio) + frequency-encoded key. The 2019 top solutions derived the jump from *rich* per-UID aggregation (nunique of many categoricals, per-UID D-stats, dozens of columns), not the key alone. Signal exists on the broader distribution (GroupKFold +0.0047, private +0.0034, both series-best) but is ~0 on the recent-slice holdout. 431,398 UIDs over 1,097,231 union rows. H4 gaps: \|A−private\| = 0.0267, \|B−private\| = 0.0443. |
