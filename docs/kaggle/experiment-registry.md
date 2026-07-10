@@ -65,8 +65,27 @@ the expected result; the actual result is filled in afterwards. Protocol:
 | Feature diff | + **label encoding** of every object-dtype column (~31: ProductCD, card4/card6, P_/R_emaildomain, M1–M9, object-typed id_12–id_38, DeviceType, DeviceInfo), missing as its own category, unseen → −1; + **frequency encoding** (train-fit, normalized) of the same object columns plus the numeric-coded high-cardinality categoricals card1, card2, card3, card5, addr1, addr2; + **email provider/suffix split** of P_/R_emaildomain (4 derived columns, label- and frequency-encoded). Canonical implementations: `src/features/engineering.py`. Model and params unchanged from EXP-001. |
 | Config | LightGBM identical to EXP-001 (registered params, seed 42). Encoders fit on each fold's training months (Scheme B) and on the train partition (Scheme A model + submission) — never on scored rows. |
 | Expected | H2 threshold: private LB ΔAUC ≥ +0.020 vs EXP-001 (private ≥ 0.9077); DeLong on holdout significant. Given H1's drift-decay finding, internal Δ is expected to exceed LB Δ: registered guess holdout Δ +0.025 to +0.040. |
+| A (holdout AUC) | *(pending — paste summary block from notebook output)* |
+| B (GroupKFold) | *(pending — paste summary block from notebook output)* |
+| DeLong vs EXP-001 | *(pending — paste summary block from notebook output)* |
+| LB public / private | **0.9251 / 0.8968** (SUB-003, 2026-07-10) |
+| Verdict / notes | *(preliminary, internals pending)* External evidence: private Δ = **+0.0091** < +0.020 threshold (criterion b failed) AND smaller than H1's realized model-swap gain (+0.0128 private, +0.0238 public vs +0.0116 public here) — the comparative core of H2 ("categoricals outgain the model swap") fails externally in both test periods. Final verdict (inconclusive vs rejected) awaits the internal DeLong result. Note: 0.8968 private is still the series best — the block helps, just less than pre-registered. |
+
+---
+
+## EXP-003 — Exploratory: time and amount features
+
+| Field | Value |
+|---|---|
+| Registered | 2026-07-10 (before running) |
+| Hypothesis | exploratory (no hypothesis — one feature block per submission; feeds H4 gap tracking and sets the predecessor for H3) |
+| Notebook | `notebooks/kaggle/k03_time_amount/` |
+| Predecessor | EXP-002 |
+| Feature diff | + `tx_hour`, `tx_dow` (periodic only — no absolute time index, to avoid trend extrapolation); + `amt_log1p`, `amt_cents` (foreign-currency cent signal); + `D{1..15}_norm` except D9 (D − day, converting timedelta counters to time-invariant reference dates; originals kept). All row-local, leak-free by construction. Canonical implementations: `src/features/engineering.py`. Model and params unchanged. |
+| Config | LightGBM identical to EXP-001/002 (registered params, seed 42). Row-local block needs no fit/transform boundary. |
+| Expected | Holdout Δ +0.005 to +0.015 vs EXP-002; the D-normalization should specifically shrink the CV−LB gap (anti-drift transform) — watch the H4 gap metrics. |
 | A (holdout AUC) | *(pending)* |
 | B (GroupKFold) | *(pending)* |
-| DeLong vs EXP-001 | *(pending)* |
-| LB public / private | *(pending — see SUB-003)* |
+| DeLong vs EXP-002 | *(pending)* |
+| LB public / private | *(pending — see SUB-004)* |
 | Verdict / notes | *(pending)* |

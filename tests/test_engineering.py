@@ -6,9 +6,12 @@ import pytest
 
 from src.features.engineering import (
     MISSING_TOKEN,
+    add_amount_features,
+    add_time_features,
     build_categorical_block,
     frequency_encode,
     label_encode,
+    normalize_d_columns,
     split_email_domain,
 )
 
@@ -115,3 +118,55 @@ class TestBuildCategoricalBlock:
         train = pd.DataFrame({"cat": ["a"], "other": [1]})
         block = build_categorical_block(train, train, ["cat"], [])
         assert list(block.columns) == ["cat_le"]
+
+
+class TestAddTimeFeatures:
+    def test_hour_and_dow_computed(self):
+        # 90000 s = 1 day + 1 h -> hour 1, dow 1
+        out = add_time_features(pd.Series([0, 90000]))
+        assert out["tx_hour"].tolist() == [0, 1]
+        assert out["tx_dow"].tolist() == [0, 1]
+
+    def test_hour_wraps_at_24(self):
+        out = add_time_features(pd.Series([24 * 3600]))
+        assert out.loc[0, "tx_hour"] == 0
+
+    def test_dow_wraps_at_7(self):
+        out = add_time_features(pd.Series([7 * 86400]))
+        assert out.loc[0, "tx_dow"] == 0
+
+    def test_no_absolute_time_column(self):
+        out = add_time_features(pd.Series([123456]))
+        assert set(out.columns) == {"tx_hour", "tx_dow"}
+
+
+class TestAddAmountFeatures:
+    def test_log_and_cents(self):
+        out = add_amount_features(pd.Series([99.95]))
+        assert out.loc[0, "amt_log1p"] == pytest.approx(np.log1p(99.95), abs=1e-6)
+        assert out.loc[0, "amt_cents"] == pytest.approx(0.95, abs=1e-6)
+
+    def test_round_amount_has_zero_cents(self):
+        out = add_amount_features(pd.Series([50.0]))
+        assert out.loc[0, "amt_cents"] == 0.0
+
+
+class TestNormalizeDColumns:
+    def test_reference_date_is_time_invariant(self):
+        # Same event date seen from two transaction days must normalize equal:
+        # event on day 10 -> D1 = 5 at day 15, D1 = 20 at day 30.
+        df = pd.DataFrame({"D1": [5.0, 20.0]})
+        dt = pd.Series([15 * 86400, 30 * 86400])
+        out = normalize_d_columns(df, dt, ["D1"])
+        assert out["D1_norm"].iloc[0] == pytest.approx(out["D1_norm"].iloc[1])
+        assert out["D1_norm"].iloc[0] == pytest.approx(-10.0)
+
+    def test_nan_stays_nan(self):
+        df = pd.DataFrame({"D1": [np.nan]})
+        out = normalize_d_columns(df, pd.Series([86400]), ["D1"])
+        assert np.isnan(out.loc[0, "D1_norm"])
+
+    def test_column_naming(self):
+        df = pd.DataFrame({"D1": [1.0], "D4": [2.0]})
+        out = normalize_d_columns(df, pd.Series([0]), ["D1", "D4"])
+        assert list(out.columns) == ["D1_norm", "D4_norm"]

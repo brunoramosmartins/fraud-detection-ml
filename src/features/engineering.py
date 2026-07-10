@@ -8,8 +8,9 @@ the leakage argument: why the feature is computable at scoring time
 without future information.
 """
 
-from typing import Dict, List
+from typing import Dict, List, Sequence
 
+import numpy as np
 import pandas as pd
 
 MISSING_TOKEN = "__missing__"
@@ -139,4 +140,95 @@ def build_categorical_block(
         out[f"{col}_le"] = label_encode(train_df[col], df[col])
     for col in freq_cols:
         out[f"{col}_freq"] = frequency_encode(train_df[col], df[col])
+    return out
+
+
+def add_time_features(transaction_dt: pd.Series) -> pd.DataFrame:
+    """Periodic time features from the transaction timestamp (EXP-003).
+
+    Args:
+        transaction_dt: ``TransactionDT`` column (seconds from the dataset
+            reference instant).
+
+    Returns:
+        DataFrame indexed like the input with int32 columns ``tx_hour``
+        (0-23) and ``tx_dow`` (0-6).
+
+    Leakage argument:
+        Row-local arithmetic on the transaction's own timestamp - no other
+        rows, no future information. Deliberately periodic only: an
+        absolute time index is NOT exposed, because a raw trend feature
+        would let the model split on "late transactions" and extrapolate
+        arbitrarily outside the training window.
+    """
+    return pd.DataFrame(
+        {
+            "tx_hour": ((transaction_dt // 3600) % 24).astype("int32"),
+            "tx_dow": ((transaction_dt // 86400) % 7).astype("int32"),
+        },
+        index=transaction_dt.index,
+    )
+
+
+def add_amount_features(amount: pd.Series) -> pd.DataFrame:
+    """Amount transforms: log scale and decimal part (EXP-003).
+
+    The decimal part (cents) is a known signal in IEEE-CIS: foreign-
+    currency transactions converted to USD produce non-round cent values.
+
+    Args:
+        amount: ``TransactionAmt`` column.
+
+    Returns:
+        DataFrame indexed like the input with float32 columns
+        ``amt_log1p`` and ``amt_cents`` (in [0, 1), rounded to 2 decimals).
+
+    Leakage argument:
+        Row-local transforms of the transaction's own amount - trivially
+        computable at scoring time.
+    """
+    cents = (amount - np.floor(amount)).round(2)
+    return pd.DataFrame(
+        {
+            "amt_log1p": np.log1p(amount).astype("float32"),
+            "amt_cents": cents.astype("float32"),
+        },
+        index=amount.index,
+    )
+
+
+def normalize_d_columns(
+    df: pd.DataFrame,
+    transaction_dt: pd.Series,
+    d_cols: Sequence[str],
+) -> pd.DataFrame:
+    """Convert D timedelta columns to time-invariant reference dates (EXP-003).
+
+    The D columns are "days since <some past event>" counters, so their raw
+    values grow with absolute time and drift out of the training range on
+    the test period. Subtracting the transaction day converts each one to
+    "day when the event happened" (a fixed date), which is stable across
+    train and test:
+
+    ``{col}_norm = D_col - TransactionDT / 86400``
+
+    Args:
+        df: Frame containing the D columns.
+        transaction_dt: ``TransactionDT`` column aligned with ``df``.
+        d_cols: D columns to normalize (D9 should be excluded - it is an
+            hour-of-day fraction, not a day counter).
+
+    Returns:
+        DataFrame indexed like ``df`` with float32 ``{col}_norm`` columns.
+        NaN inputs stay NaN.
+
+    Leakage argument:
+        Row-local arithmetic between two values of the same transaction.
+        The subtraction *removes* absolute-time information rather than
+        adding it, which is the anti-drift purpose of the transform.
+    """
+    days = transaction_dt / 86400.0
+    out = pd.DataFrame(index=df.index)
+    for col in d_cols:
+        out[f"{col}_norm"] = (df[col] - days).astype("float32")
     return out
