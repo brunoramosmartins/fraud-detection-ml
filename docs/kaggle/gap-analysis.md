@@ -1,125 +1,124 @@
-# Gap Analysis — Our Approach vs the Winning Solutions
+# Gap Analysis — Our Approach vs the Winning Solution (verified)
 
 ## Purpose
 
 Phase 8 adjudicated four pre-registered hypotheses and reached a single-model
-private LB of **0.9032** (EXP-004). This document is the Phase 8.6 capstone: a
-structured decomposition of what separates our result from the public winning
-solutions, written **after** all hypotheses were locked and settled — so it
-retro-alters no verdict. It exists to answer Bruno's framing question:
+private LB of **0.9032** (EXP-004). This Phase 8.6 capstone decomposes what
+separates that from the public winning solution — written **after** all
+hypotheses were locked, so it retro-alters no verdict. It answers the author's
+framing question: *what did the roadmap lack, and where is the gap real learning
+vs. mere energy?*
 
-> "Reflect on what the roadmap lacked to reach a performance similar to the
-> winning team — recognising that some of that gap may be a lot of energy spent
-> refining parameters and testing, i.e. low learning-value per unit effort."
+The technique inventory below is now **verified against the downloaded notebook**
+`xgb-fraud-with-magic-0-9600.ipynb` (Chris Deotte), not memory. One earlier
+estimate was wrong and is corrected here (post-processing is small, not large) —
+which is exactly why verifying against source mattered.
 
-The goal is a **mature development method**, not a rank. So each missing
-technique is scored not only by its likely AUC contribution but by its
-**insight-per-effort** — and the roadmap only spends effort where the learning
-is real. Every "estimated contribution" below is a hypothesis to be *measured*
-by a confirmatory experiment (EXP-006+), not an assertion.
-
-## Sourcing & honesty note
-
-The technique inventory is drawn from two public artifacts named by the author:
-
-- Deotte, *XGB Fraud with Magic* (public notebook) — single-model XGBoost.
-- FraudSquad, *1st Place Solution* (competition writeup).
-
-Only one number here is directly verified from the live page: the Deotte
-notebook's **private score 0.934084** (the "0.9600" in its title is the inflated
-public/CV figure). Technique rows are marked **[verify]** where the detail comes
-from prior knowledge of these canonical solutions and should be confirmed
-against the source — the confirmatory experiments are what turn each into a
-measured delta, so no row is treated as fact until an experiment moves it.
-
-## Benchmark ladder (private LB, single-model unless noted)
+## Benchmark ladder (private LB, single model unless noted)
 
 | Reference | Private LB | Gap to us | What it isolates |
 |---|---|---|---|
-| **Ours — EXP-000** (sklearn GB, numeric-only) | 0.8749 | — | production baseline |
-| **Ours — EXP-004** (single LightGBM, minimal FE) | **0.9032** | — | our best, single model |
-| Deotte single XGB "with magic" | **0.9341** (verified) | **+0.031** | *rich* feature engineering, single model |
-| FraudSquad 1st place | ~0.9459 | +0.043 | ensemble + client-level post-processing |
+| Ours — EXP-000 (sklearn GB, numeric-only) | 0.8749 | — | production baseline |
+| **Ours — EXP-004** (LightGBM, UID + 4 aggregates) | **0.9032** | — | our best, single model |
+| Deotte XGB_96 (UID + **47** aggregates, pre-postprocess) | **0.9324** | +0.029 | *rich aggregation*, single model |
+| Deotte XGB_96_PP (+ client-level post-process) | **0.9341** | +0.031 | post-process, single model |
+| FraudSquad 1st place (XGB+LGB+CatBoost ensemble + PP) | ~0.9459 | +0.043 | ensemble |
 
-Two distinct gaps, and they teach different things:
+**Corrected decomposition of the gap (verified from the notebook):**
 
-- **0.9032 → 0.9341 (+0.031): the feature-engineering-richness gap.** Same class
-  of model (single GBDT). This is the *learnable, high-value* gap — it is closed
-  by engineering, not by parameter search. This is where the roadmap
-  under-invested (H3 shipped a 4-aggregate UID; the winners shipped hundreds).
-- **0.9341 → 0.9459 (+0.012): the ensemble + post-processing gap.** Diminishing
-  returns, higher energy, lower learning-value per unit effort — exactly the
-  "refining parameters and stacking" work Bruno flagged as low-value.
+- **0.9032 → 0.9324 (+0.029): rich group-aggregation.** Same model class. Deotte
+  builds **47** aggregation features; we built **4**. This is the whole ballgame
+  and it is *engineering knowledge*, not parameters.
+- **0.9324 → 0.9341 (+0.0016): client-level post-processing.** Verified from the
+  notebook: *"increases its Private LB to 0.9341 from 0.9324 … improvement of
+  0.0016."* I previously over-estimated this at +0.005–0.015 — **it is small**.
+  Still conceptually deep, but not the lever.
+- **0.9341 → 0.9459 (+0.012): ensemble.** Energy, not insight.
 
-**Bruno's instinct is confirmed by the ladder:** the first gap is worth closing
-(it is knowledge); the last gap is mostly energy. The roadmap should chase the
-+0.031, sample the post-processing idea cheaply, and stop there.
+**Confirmed conclusion (sharper than before):** the entire learnable gap is the
+**breadth of UID aggregation**. Post-processing and ensembling — the things that
+*look* like "the secret" — together add only ~+0.014 and cost the most energy.
+The author's instinct to not grind params/stacking is right; the one thing worth
+replicating in full is the aggregation engine.
 
-## Technique decomposition
+## Exactly what they did (verified) vs what we did
 
-Legend — Have: ✅ full · 🟡 minimal · ❌ absent. Effort: notebook-hours.
+### The UID (identical to ours ✅)
 
-| # | Technique (winners) | Have | Our depth | Est. contribution | Insight/effort | Confirmatory exp |
-|---|---|---|---|---|---|---|
-| 1 | UID client key `card1_addr1_(day−D1)` | ✅ | key built | (in H3) | — | done (EXP-004) |
-| 2 | **Rich per-UID aggregations** — mean/std of Amt, C1–C14, D1–D15, and many V; **nunique** of card/addr/email per UID [verify] | 🟡 | 4 aggregates only | **large (+0.01–0.02)** | **high** | **EXP-006** |
-| 3 | **Client-level prediction averaging** — group final probs by UID and assign the UID mean (fraud is client-consistent) [verify] | ❌ | none | **large (+0.005–0.015)** | **very high** (cheap, no retrain) | **EXP-007** |
-| 4 | Multiple UIDs (card1_addr1, card1_addr1_P_email, …) + aggregations on each [verify] | ❌ | single UID | medium | medium | EXP-006 (bundled) |
-| 5 | D-column normalization `D_n − day` | ✅ | done | (in EXP-003) | — | done |
-| 6 | Frequency encoding of high-card categoricals | ✅ | ~10 cols | (in EXP-002) | — | done |
-| 7 | V-column reduction (drop/PCA correlated V groups) [verify] | ❌ | all V kept as-is | small (noise/speed) | low | optional |
-| 8 | Model: XGBoost GPU, depth 12, subsample/colsample 0.4 [verify] | 🟡 | LightGBM, num_leaves 192 | small (model class ≈ settled in H1) | low | not planned |
-| 9 | Ensemble XGB + LGB + CatBoost | ❌ | single model (by design) | +0.005–0.01 | low (energy-heavy) | **out of scope** (ADR: single-model stance) |
-| 10 | GroupKFold-by-month CV | ✅ | computed | (H4: worse LB predictor than temporal split) | — | done |
+```python
+uid = card1_addr1 + '_' + floor(day - D1)      # day = TransactionDT/86400
+```
 
-## What the roadmap lacked (the honest reflection)
+Our `make_uid` matches this. The key was never the gap.
 
-1. **Under-specified the UID block.** H3 pre-registered a *minimal* 4-aggregate
-   UID and then, when it failed, we correctly diagnosed "richness, not the key,
-   is the magic" — but as an assertion. The roadmap should have scoped the UID
-   block as "aggregate a *broad column set* by UID," because the published
-   magic was always the breadth of aggregation. Row 2 is the confirmatory fix.
-2. **Missed the post-processing lever entirely.** Neither the roadmap nor any
-   hypothesis considered client-level probability averaging (row 3). It is the
-   highest insight-per-effort item on the board — no retraining, a few lines —
-   and it is conceptually the deepest point of the whole competition (fraud is a
-   property of the *client*, not the isolated transaction). Its absence is the
-   biggest single miss.
-3. **Correctly avoided the low-value work.** The roadmap's single-model stance
-   (no stacking) and its refusal to grid-search params look *right* in
-   hindsight: rows 7–9 are where energy goes to die. The 1st place's last
-   +0.012 over a single strong model is not where the learning is.
+### Group aggregations — 47 features (this IS the gap 🟡→❌)
 
-## Proposed confirmatory experiments (measured, not asserted)
+| Winner's aggregation | Function | We have? |
+|---|---|---|
+| `TransactionAmt, D4, D9, D10, D15` by uid | mean, std | 🟡 only Amt mean/std |
+| `C1..C14` (except C3) by uid | mean | ❌ |
+| `M1..M9` by uid | mean | ❌ |
+| `P_emaildomain, dist1, DT_M, id_02, cents` by uid | **nunique** | ❌ (no nunique at all) |
+| `C14` by uid | std | ❌ |
+| `C13, V314` by uid | nunique | ❌ |
+| `V127,V136,V309,V307,V320` by uid | nunique | ❌ |
+| **also at coarser UIDs** `card1`, `card1_addr1`, `card1_addr1_P_emaildomain`: `TransactionAmt, D9, D11` | mean, std | ❌ (single UID only) |
+| `outsider15 = (|D1-D15|>3)` | interaction | ❌ |
 
-Ordered by insight-per-effort, not by expected AUC. Each is a *replication of a
-published technique*, explicitly **not** a new pre-registered hypothesis (H1–H4
-are closed). Each gets a registry entry and a logged submission like any other.
+Two things we entirely missed: **nunique aggregation** (`encode_AG2` — how many
+distinct emails/devices/etc. a client touches, a powerful fraud signal) and
+**multi-granularity UIDs** (aggregating at card1, card1_addr1, and
+card1_addr1_email as well as the D1-based key).
 
-- **EXP-006 — Rich UID aggregations.** Aggregate a broad set (C1–C14, D1–D15,
-  TransactionAmt, dist1) by UID with mean/std, plus nunique of {card1..6, addr1,
-  P_emaildomain, DeviceInfo} per UID; add a second UID (card1_addr1_P_email).
-  Measures rows 2 & 4. Predicts: closes much of the +0.031. DeLong vs EXP-004.
-- **EXP-007 — Client-level probability post-processing.** Take EXP-006's (or the
-  best model's) test predictions, group by UID, assign the per-UID mean. **No
-  retraining** — operates on `submission.csv`. Measures row 3. This one is the
-  cheap, deep insight; if it moves the private LB substantially, it is the
-  headline of the whole gap analysis.
-- **(Optional) EXP-008 — single-model consolidation** with light tuning + seed
-  averaging on the EXP-006 feature set, as the final Phase 8 number.
+### Time-Consistency feature selection (we don't do this — and it's the answer to "how to do FE on masked data")
 
-The stopping rule stays honest: we chase the feature-engineering gap (EXP-006/
-007) because it is *understanding*; we do **not** build the ensemble (row 9)
-because that gap is *energy*. If EXP-007's post-processing reproduces the
-client-level insight, the investigation has achieved its real goal — a mature,
-reproducible method and a precise account of the last mile's cost — regardless
-of the final digit.
+Deotte trains a model on the **first month**, validates on the **last month**,
+**one feature at a time**, and drops any feature whose AUC isn't consistently
+> 0.5 across time (he removed `C3, M5, id_08, id_33, card4, id_07, id_14,
+id_21, id_30, id_32, id_34, id_22..27`). This is a *purely statistical* feature
+filter — no domain meaning needed. See `docs/kaggle/fe-playbook.md` for why this
+is the master technique for masked data.
+
+### Post-process (verified small: +0.0016)
+
+Group final predictions by a *precise* UID (Konstantin's cleaned UIDs) and
+replace every transaction's prediction with the client's **mean prediction,
+including train `isFraud` labels**. Rationale: all transactions of one client
+share the same label. Cheap, conceptually deep, but only +0.0016 private here.
+
+## What the roadmap lacked (honest reflection)
+
+1. **Under-scoped the UID block to 4 aggregates.** H3 tested "does a UID help"
+   with a minimal block; the published magic was always *47 aggregations across
+   multiple UID granularities, including nunique*. The diagnosis after H3's
+   rejection ("richness, not the key") is now **verified**: the key is identical;
+   the breadth is the difference. EXP-006 replicates the full engine.
+2. **No statistical feature-selection step.** We kept all columns; Deotte prunes
+   with a time-consistency test. This is the single most transferable technique
+   for masked data and we skipped it. EXP-006 adds it.
+3. **No nunique aggregations, single UID granularity.** Two concrete, cheap
+   additions with real signal.
+4. **Correctly avoided the low-value work.** Ensembling (+0.012, high energy) and
+   post-processing (+0.0016) are *not* where the learning is — the roadmap's
+   single-model stance holds up.
+
+## Confirmatory experiments (replications of verified technique — not new hypotheses)
+
+- **EXP-006 — Full aggregation engine + time-consistency selection.** Replicate
+  the verified feature set: multi-UID (card1, card1_addr1, card1_addr1_email,
+  D1-based), mean/std of Amt+D-cols+C-cols+M-cols, nunique of email/device/id/V
+  cols, `outsider15`, then time-consistency pruning. DeLong vs EXP-004. Predicts:
+  closes most of the +0.029. **This is the one experiment that matters.**
+- **EXP-007 — Client-level post-processing.** Group EXP-006's test predictions by
+  UID, assign the per-UID mean (incl. train labels). No retraining. Now scoped as
+  a **small** expected gain (~+0.002), run for completeness and the conceptual
+  point, not for the number.
+- **Not planned: ensemble.** ADR single-model stance; the +0.012 is energy.
 
 ## Serving-boundary note (feeds ADR-006, Phase 9)
 
-Rows 2–4 are transductive/aggregate features. Their real-time-serving feasibility
-(a UID's aggregates need a client feature store; client-level averaging needs the
-client's other transactions) is exactly the Kaggle-vs-production divergence
-ADR-006 will document. The gap analysis therefore also seeds Phase 9: the
-techniques that close the Kaggle gap are precisely the ones that stress the
-serving design — a genuine, defensible interview discussion.
+The aggregation engine and post-processing are transductive/client-level: in
+real-time serving a UID's aggregates need a client feature store and the
+post-process needs the client's history. This is precisely the Kaggle-vs-
+production divergence ADR-006 documents — the features that close the Kaggle gap
+are the ones that stress the serving design.

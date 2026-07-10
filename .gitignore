@@ -90,3 +90,4 @@ dist/
 build/
 *.egg-info/
 .coverage
+xgb-fraud-with-magic-0-9600.ipynb
