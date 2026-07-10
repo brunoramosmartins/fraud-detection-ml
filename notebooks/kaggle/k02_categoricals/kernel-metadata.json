@@ -1,7 +1,7 @@
 {
-  "id": "brunoramosmartins/exp-001-lightgbm-numeric-h1",
-  "title": "EXP-001 LightGBM Numeric - H1",
-  "code_file": "k01-lgbm-numeric.ipynb",
+  "id": "brunoramosmartins/exp-002-categoricals-h2",
+  "title": "EXP-002 Categoricals - H2",
+  "code_file": "k02-categoricals.ipynb",
   "language": "python",
   "kernel_type": "notebook",
   "is_private": true,
@@ -10,6 +10,6 @@
   "enable_internet": false,
   "dataset_sources": [],
   "competition_sources": ["ieee-fraud-detection"],
-  "kernel_sources": ["brunoramosmartins/exp-000-baseline-production-pipeline"],
+  "kernel_sources": ["brunoramosmartins/exp-001-lightgbm-numeric-h1"],
   "model_sources": []
 }
