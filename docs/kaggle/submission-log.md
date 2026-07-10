@@ -7,7 +7,8 @@ scores but no leaderboard rank; percentile equivalences reference the frozen
 
 | # | Date | Experiment | Notebook / commit | Feature set | Holdout AUC (A) | GroupKFold (B) | Expected LB | Public LB | Private LB |
 |---|---|---|---|---|---|---|---|---|---|
-| SUB-001 | 2026-07-10 | EXP-000 | `k00_baseline_submission` @ *(commit)* | v1 numeric-only, fillna(0), sklearn GB | 0.8614 | exempt | 0.83–0.86 | *(pending)* | *(pending)* |
+| SUB-001 | 2026-07-10 | EXP-000 | `k00_baseline_submission` @ *(commit)* | v1 numeric-only, fillna(0), sklearn GB | 0.8614 | exempt | 0.83–0.86 | **0.8896** | **0.8749** |
+| SUB-002 | *(pending)* | EXP-001 | `k01_lgbm_numeric` @ *(commit)* | v1 numeric-only, native NaN, LightGBM | *(pending)* | *(pending)* | private ≥ 0.890 (H1: +0.015 over SUB-001) | *(pending)* | *(pending)* |
 
 ## Submission command (author executes)
 
