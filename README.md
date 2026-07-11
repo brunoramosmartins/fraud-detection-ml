@@ -26,6 +26,33 @@
 
 > Metrics evaluated on a temporal hold-out set (most recent 20% of transactions). No data leakage.
 
+### Kaggle Extension (Phase 8)
+
+The system was extended into a Kaggle-competitive investigation on the IEEE-CIS
+leaderboard (late submissions), framed as four pre-registered hypotheses. A
+single, explainable LightGBM with entity-aggregation features reached **private
+LB 0.9078** (public 0.9377), up from the production pipeline's 0.8749 on the same
+Kaggle test set.
+
+| Milestone | Private LB |
+|---|---|
+| Production pipeline (sklearn GB, numeric-only) | 0.8749 |
+| **This project — single LightGBM + feature engineering** | **0.9078** |
+| Reference: strongest public single model (Deotte) | 0.9324 |
+| Reference: 1st-place ensemble | 0.9459 |
+
+The headline is the method, not the number: every gain was scored one feature
+block at a time on the frozen leaderboard, compared with a DeLong test on an
+internal temporal holdout, and given an honest verdict — including four
+hypotheses that returned inconclusive or rejected. Central finding: **internal
+validation systematically overstates private-LB gains under temporal drift**, and
+a seen/unseen-client diagnostic (holdout AUC 0.99 on known clients vs 0.90 on new
+ones) explains why. Full write-up in [`docs/kaggle/`](docs/kaggle/).
+
+> Late submissions receive leaderboard scores but no rank. This was a
+> learning-focused single-model investigation, deliberately without the
+> multi-model ensembling and post-processing the top solutions used.
+
 ---
 
 ## System Architecture
@@ -57,6 +84,7 @@ graph LR
 | **5** | Deployment simulation | FastAPI, Docker, PSI drift monitoring, retraining automation |
 | **6** | Communication | Executive reporting, trade-off analysis, technical documentation |
 | **7** | Interview readiness | Architecture diagrams, ADRs, hyperparameter analysis, demo runbook |
+| **8** | Kaggle-competitive modeling | LightGBM, entity/UID aggregation, DeLong AUC tests, pre-registered hypotheses, temporal-drift diagnostics |
 
 ---
 
@@ -93,6 +121,10 @@ Executive summary, technical deep-dive, trade-off analysis, model limitations, a
 **Phase 7 — Interview Maximization**
 Architecture diagrams, hyperparameter analysis, Architecture Decision Records, extensions roadmap, and demo runbook.
 → [`docs/diagrams/01_system_architecture.md`](docs/diagrams/01_system_architecture.md) · [`docs/14_hyperparameter_guide.md`](docs/14_hyperparameter_guide.md) · [`docs/decisions/`](docs/decisions/) · [`DEMO.md`](DEMO.md)
+
+**Phase 8 — Kaggle-Competitive Modeling** *(extension)*
+Reframed modeling as a pre-registered research question (H1–H4) on the IEEE-CIS leaderboard. Built a LightGBM pipeline with categorical encodings, time/amount features, and entity (UID) aggregations replicating the competition's winning technique. Every experiment registered before running and every submission logged before upload; AUC comparisons via the DeLong test on a temporal holdout. Reached single-model private LB 0.9078 and established that internal validation overstates private-LB gains under temporal drift.
+→ [`docs/kaggle/research.md`](docs/kaggle/research.md) · [`docs/kaggle/gap-analysis.md`](docs/kaggle/gap-analysis.md) · [`docs/kaggle/fe-playbook.md`](docs/kaggle/fe-playbook.md) · [`docs/kaggle/validation-and-selection-playbook.md`](docs/kaggle/validation-and-selection-playbook.md)
 
 ---
 
