@@ -108,3 +108,22 @@ the expected result; the actual result is filled in afterwards. Protocol:
 | DeLong vs EXP-003 | ΔAUC **+0.0004** [95% CI −0.0012, +0.0020], z = 0.45, **p = 0.65 — NOT significant** |
 | LB public / private | **0.9314 / 0.9032** (SUB-005, 2026-07-10) |
 | Verdict / notes | **H3: REJECTED.** Both criteria fail: internal DeLong is *not significant* (Δ +0.0004, p = 0.65 — indistinguishable from zero on the Scheme-A holdout) AND private LB Δ = +0.0034 << +0.015 threshold, with private 0.9032 < 0.93. Per the rule (both criteria against the prediction → rejected). **Interpretation:** the famous "magic feature" is not magic *in this minimal form* — a 4-aggregate UID (count, amt mean/std/ratio) + frequency-encoded key. The 2019 top solutions derived the jump from *rich* per-UID aggregation (nunique of many categoricals, per-UID D-stats, dozens of columns), not the key alone. Signal exists on the broader distribution (GroupKFold +0.0047, private +0.0034, both series-best) but is ~0 on the recent-slice holdout. 431,398 UIDs over 1,097,231 union rows. H4 gaps: \|A−private\| = 0.0267, \|B−private\| = 0.0443. |
+
+---
+
+## EXP-006 — Confirmatory: full aggregation engine (winning-solution replication)
+
+| Field | Value |
+|---|---|
+| Registered | 2026-07-11 (before running) |
+| Hypothesis | none — confirmatory replication of a verified published technique (`docs/kaggle/gap-analysis.md`); H1–H4 are closed |
+| Notebook | `notebooks/kaggle/k06_full_aggregation/` |
+| Predecessor | EXP-004 (the minimal-UID model — this isolates *aggregation richness*, holding model class fixed) |
+| Feature diff | Replaces EXP-004's 4-aggregate block with Deotte's verified ~47-feature engine: (a) combine keys `card1_addr1`, `card1_addr1_P_emaildomain`; (b) `aggregate_group` mean/std of `TransactionAmt, D9, D11` at `card1 / card1_addr1 / card1_addr1_P_emaildomain`; (c) at the D1-based `uid`: mean/std of `TransactionAmt, D4, D9, D10, D15`, mean of `C1..C14` (except C3), mean of `M1..M9`, std of `C14`; (d) `aggregate_nunique` of `P_emaildomain, dist1, DT_M, id_02, cents, C13, V314, V127, V136, V309, V307, V320` at `uid`; (e) `outsider15 = (|D1−D15|>3)`; (f) frequency-encode all UIDs. NaN left native (deviation from Deotte's fillna(-1), consistent with our EXP-001+). Model/params unchanged (LightGBM, seed 42). |
+| Config | LightGBM identical to EXP-001..004. Aggregations label-free over the train+test union; categorical/UID frequency encoders keep the per-fit discipline. |
+| Expected | Confirmatory prediction: closes most of the verified +0.029 private gap to Deotte's single XGB (0.9324). Target private ~0.92–0.93; holdout Δ large vs EXP-004. This is the one experiment that tests "richness, not the key, is the lever." |
+| A (holdout AUC) | *(pending)* |
+| B (GroupKFold) | *(pending)* |
+| DeLong vs EXP-004 | *(pending — off-notebook)* |
+| LB public / private | *(pending — see SUB-006)* |
+| Verdict / notes | *(pending)* |

@@ -12,6 +12,7 @@ scores but no leaderboard rank; percentile equivalences reference the frozen
 | SUB-003 | 2026-07-10 | EXP-002 | `k02_categoricals` @ *(commit)* | v2a: + categorical encodings (label + freq + email split) | 0.9257 | 0.9398 ± 0.0109 | private ≥ 0.9077 (H2: +0.020 over SUB-002) | **0.9251** | **0.8968** |
 | SUB-004 | 2026-07-10 | EXP-003 | `k03_time_amount` @ *(commit)* | v2b: + time/amount/D-norm (exploratory) | 0.9296 | 0.9428 ± 0.0106 | private ~0.90 (exploratory, +0.005 a +0.015) | **0.9284** | **0.8998** |
 | SUB-005 | 2026-07-10 | EXP-004 | `k04_uid_aggregations` @ *(commit)* | v2c: + UID key + per-UID aggregates | 0.9299 | 0.9475 ± 0.0124 | private ≥ 0.9148 and ≥ 0.93 (H3: +0.015 over SUB-004) | **0.9314** | **0.9032** |
+| SUB-006 | *(pending)* | EXP-006 | `k06_full_aggregation` @ *(commit)* | v3: full aggregation engine (multi-UID mean/std/nunique, ~47 feats) | *(pending)* | *(pending)* | private ~0.92-0.93 (confirmatory, closes +0.029 gap) | *(pending)* | *(pending)* |
 
 ## Submission command (author executes)
 

@@ -325,3 +325,95 @@ def add_uid_aggregates(
         index=df.index,
     )
     return out
+
+
+def combine_columns(df: pd.DataFrame, col1: str, col2: str, sep: str = "_") -> pd.Series:
+    """Concatenate two columns into a combined categorical key (EXP-006).
+
+    Mirrors the winning solution's ``encode_CB``: builds a coarser grouping key
+    (e.g. ``card1_addr1``) that a single column cannot express.
+
+    Args:
+        df: Source frame.
+        col1, col2: Column names to combine.
+        sep: Separator token.
+
+    Returns:
+        Object-dtype string series aligned with ``df``; missing components
+        render as the literal missing token (never null).
+
+    Leakage argument:
+        Row-local string concatenation — each output depends only on the same
+        row's two inputs. No aggregation, no other rows, no future information.
+    """
+    return (_as_str(df[col1]) + sep + _as_str(df[col2])).astype("object")
+
+
+def aggregate_group(
+    df: pd.DataFrame,
+    group_key: str,
+    value_cols: "list[str]",
+    aggs: "tuple[str, ...]" = ("mean", "std"),
+) -> pd.DataFrame:
+    """Per-row group aggregates of ``value_cols`` within ``group_key`` (EXP-006).
+
+    Mirrors the winning solution's ``encode_AG``. NaN is left as NaN (LightGBM
+    handles it natively) rather than filled with a sentinel — consistent with
+    this project's native-NaN choice since EXP-001, and a deliberate deviation
+    from Deotte's ``fillna(-1)`` (which suited his XGBoost setup).
+
+    Args:
+        df: Frame containing ``group_key`` and ``value_cols``. The caller
+            passes the **train+test union** so each group has one consistent
+            profile (label-free, transductive).
+        group_key: Column name to group by (e.g. ``"uid"``, ``"card1_addr1"``).
+        value_cols: Columns to aggregate.
+        aggs: Aggregation functions (``"mean"``, ``"std"``, ``"count"``, ...).
+
+    Returns:
+        Float32 DataFrame indexed like ``df`` with one column per
+        (value_col, agg): ``{value_col}_{group_key}_{agg}``.
+
+    Leakage argument:
+        Aggregations are **label-free** (no ``isFraud``), so computing them over
+        the train+test union leaks no target. Transductive, not temporal
+        leakage: the union is available at batch-scoring time, and the private
+        LB (a disjoint later slice) is the independent leak detector. Real-time
+        serving needs a client feature store — see ADR-006.
+    """
+    g = df.groupby(group_key)
+    out = pd.DataFrame(index=df.index)
+    for col in value_cols:
+        transformed = g[col].transform
+        for agg in aggs:
+            out[f"{col}_{group_key}_{agg}"] = transformed(agg).astype("float32")
+    return out
+
+
+def aggregate_nunique(
+    df: pd.DataFrame, group_key: str, value_cols: "list[str]"
+) -> pd.DataFrame:
+    """Per-row count of distinct ``value_cols`` values within ``group_key`` (EXP-006).
+
+    Mirrors the winning solution's ``encode_AG2``. Captures how many distinct
+    emails / devices / values a client (group) touches — a strong fraud signal
+    that needs no domain meaning.
+
+    Args:
+        df: Frame with ``group_key`` and ``value_cols`` (train+test union).
+        group_key: Column name to group by.
+        value_cols: Columns whose distinct-value count per group is taken.
+
+    Returns:
+        Float32 DataFrame indexed like ``df`` with columns
+        ``{group_key}_{value_col}_ct``.
+
+    Leakage argument:
+        Same as :func:`aggregate_group`: label-free distributional summary over
+        the union; no target information enters.
+    """
+    g = df.groupby(group_key)
+    out = pd.DataFrame(index=df.index)
+    for col in value_cols:
+        out[f"{group_key}_{col}_ct"] = g[col].transform("nunique").astype("float32")
+    return out

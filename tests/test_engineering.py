@@ -9,7 +9,10 @@ from src.features.engineering import (
     add_amount_features,
     add_time_features,
     add_uid_aggregates,
+    aggregate_group,
+    aggregate_nunique,
     build_categorical_block,
+    combine_columns,
     frequency_encode,
     label_encode,
     make_uid,
@@ -247,3 +250,69 @@ class TestAddUidAggregates:
         uid = pd.Series(["a", "a"])
         out = add_uid_aggregates(df, uid)
         assert out["uid_amt_mean"].tolist() == [15.0, 15.0]
+
+
+class TestCombineColumns:
+    def test_concatenates(self):
+        df = pd.DataFrame({"card1": [1000, 2000], "addr1": [10, 20]})
+        out = combine_columns(df, "card1", "addr1")
+        assert out.tolist() == ["1000_10", "2000_20"]
+
+    def test_missing_uses_token(self):
+        df = pd.DataFrame({"card1": [1000, np.nan], "addr1": [10, 20]})
+        out = combine_columns(df, "card1", "addr1")
+        assert out.iloc[1] == f"{MISSING_TOKEN}_20"
+
+    def test_distinguishes_pairs(self):
+        # (1,2) and (12, "") must not collide -> separator matters
+        df = pd.DataFrame({"a": ["1", "12"], "b": ["2", ""]})
+        out = combine_columns(df, "a", "b")
+        assert out.iloc[0] != out.iloc[1]
+
+
+class TestAggregateGroup:
+    def test_mean_and_std_over_group(self):
+        df = pd.DataFrame(
+            {"uid": ["a", "a", "b"], "TransactionAmt": [100.0, 300.0, 50.0]}
+        )
+        out = aggregate_group(df, "uid", ["TransactionAmt"], aggs=("mean", "std"))
+        assert out["TransactionAmt_uid_mean"].tolist() == [200.0, 200.0, 50.0]
+        # group b is a singleton -> std is NaN (left as NaN by design)
+        assert np.isnan(out["TransactionAmt_uid_std"].iloc[2])
+
+    def test_column_naming(self):
+        df = pd.DataFrame({"uid": ["a"], "C1": [1.0], "C2": [2.0]})
+        out = aggregate_group(df, "uid", ["C1", "C2"], aggs=("mean",))
+        assert sorted(out.columns) == ["C1_uid_mean", "C2_uid_mean"]
+
+    def test_dtype_float32(self):
+        df = pd.DataFrame({"uid": ["a", "a"], "x": [1.0, 3.0]})
+        out = aggregate_group(df, "uid", ["x"], aggs=("mean",))
+        assert out["x_uid_mean"].dtype == np.float32
+
+    def test_label_free(self):
+        df = pd.DataFrame(
+            {"uid": ["a", "a"], "x": [1.0, 3.0], "isFraud": [1, 0]}
+        )
+        out = aggregate_group(df, "uid", ["x"], aggs=("mean",))
+        assert out["x_uid_mean"].tolist() == [2.0, 2.0]
+
+
+class TestAggregateNunique:
+    def test_distinct_count_per_group(self):
+        df = pd.DataFrame(
+            {"uid": ["a", "a", "a", "b"], "email": ["x", "x", "y", "z"]}
+        )
+        out = aggregate_nunique(df, "uid", ["email"])
+        # group a touches 2 distinct emails, b touches 1
+        assert out["uid_email_ct"].tolist() == [2.0, 2.0, 2.0, 1.0]
+
+    def test_column_naming(self):
+        df = pd.DataFrame({"uid": ["a"], "dev": ["d1"], "dist": [1.0]})
+        out = aggregate_nunique(df, "uid", ["dev", "dist"])
+        assert sorted(out.columns) == ["uid_dev_ct", "uid_dist_ct"]
+
+    def test_dtype_float32(self):
+        df = pd.DataFrame({"uid": ["a", "a"], "v": ["p", "q"]})
+        out = aggregate_nunique(df, "uid", ["v"])
+        assert out["uid_v_ct"].dtype == np.float32
