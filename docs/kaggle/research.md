@@ -147,6 +147,69 @@ its estimate. **Practical takeaway:** for a temporally-drifting deployment, the
 "naive" most-recent-slice holdout is the more honest model-selection signal than
 the more elaborate month-wise GroupKFold.
 
-## Answer to the Research Question
+## Answer to the Research Question (Phase 8 closed — 2026-07-11)
 
-*(written after H1–H4 verdicts and ADR-006)*
+> *Where does the gap between the production baseline (0.861 internal) and a
+> Kaggle-competitive score come from, and which parts survive serving?*
+
+### Where the gap comes from — the private-LB decomposition
+
+Every block was added one at a time and scored on the frozen private leaderboard:
+
+| Step | Block | Private LB | Δ private |
+|---|---|---|---|
+| EXP-000 | production baseline (sklearn GB, numeric-only) | 0.8749 | — |
+| EXP-001 | LightGBM + native NaN (H1) | 0.8877 | +0.0128 |
+| EXP-002 | categorical encodings (H2) | 0.8968 | +0.0091 |
+| EXP-003 | time / amount / D-normalization | 0.8998 | +0.0030 |
+| EXP-004 | minimal UID (H3) | 0.9032 | +0.0034 |
+| EXP-006 | full aggregation engine (64 feats) | 0.9078 | +0.0046 |
+| EXP-007 | temporal-stability selection | 0.9077 | −0.0001 |
+
+Total realised: **0.8749 → 0.9078 (+0.033)** with a single explainable LightGBM.
+No model class won by itself, no single feature block was the "magic"; the gain
+is broad and incremental.
+
+### The two findings that outweigh the number
+
+1. **Internal validation systematically overstates private-LB gains under
+   temporal drift.** Every block's internal ΔAUC exceeded its private ΔAUC
+   (H1 +0.051 internal → +0.013 private; EXP-006 +0.012 → +0.005). Four
+   hypotheses, none "supported" — not because the work failed, but because the
+   pre-registered thresholds assumed internal gains transfer to the future, and
+   they do not. H4 sharpened this: the *simple* temporal holdout predicts the
+   private LB better than month-wise GroupKFold (4/4).
+
+2. **The mechanism is entity memorisation, and it is the true ceiling.** The
+   seen/unseen-UID diagnostic (EXP-007): holdout AUC **0.9897 on clients seen in
+   training vs 0.8990 on new clients**. The private test set is mostly new
+   clients, so the private LB ≈ the new-client ceiling (~0.90). This one split
+   explains the entire drift-decay pattern. It also redraws the remaining gap to
+   the winners' single model (0.9324): it is **not** more aggregation (EXP-006:
+   internal-only gain) and **not** feature selection (EXP-007: no private gain) —
+   it is **entity resolution / linkability** (more, more-precise UIDs to link
+   test transactions to known clients) plus client-level label propagation. That
+   is where the winners spent their nights (deanonymising D-columns, building
+   transaction chains).
+
+### Which parts survive serving — deferred to Phase 9 / ADR-006
+
+The largest levers (UID aggregations, client-level features) are transductive:
+they need the train+test union or a client feature store, and would be
+recomputed at scoring time from a client's history. The model class swap
+(LightGBM), native-NaN handling, frequency encoding, and row-local
+time/amount/D-normalization features are serving-feasible. ADR-006 draws this
+boundary and Phase 9 retrains the served model on the feasible subset.
+
+### Verdict summary
+
+| H | Verdict | One-line reason |
+|---|---|---|
+| H1 | Inconclusive | internal significant, private below +0.015 threshold |
+| H2 | Inconclusive | categoricals gained *less* than the model swap (comparative claim refuted) |
+| H3 | Rejected | minimal UID: internal Δ not significant, private below thresholds |
+| H4 | Rejected | temporal holdout beats GroupKFold as an LB predictor (4/4) |
+
+The investigation's value is the disciplined arc — pre-registration, honest
+nulls, a claim (selection) tested and **refuted**, and a diagnostic that
+explains the whole pattern — not the leaderboard digit.

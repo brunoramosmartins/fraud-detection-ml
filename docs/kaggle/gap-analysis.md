@@ -115,6 +115,30 @@ share the same label. Cheap, conceptually deep, but only +0.0016 private here.
   point, not for the number.
 - **Not planned: ensemble.** ADR single-model stance; the +0.012 is energy.
 
+## CORRECTION after EXP-007 (2026-07-11) — the gap is entity linkability, not selection
+
+The reflection above claimed the remaining +0.025 gap to Deotte was **feature
+selection** (dropping time-unstable features). **EXP-007 refuted this**, and the
+correction is the most important result of the investigation:
+
+- Temporal-stability selection (drop 6 raw ids + 19 flip/decay features) removed
+  overfit — holdout −0.0038, **CV−LB gap 0.0343 → 0.0306** — but **did not raise
+  the private LB** (0.9077 ≈ 0.9078).
+- The **adversarial train-vs-test AUC was 0.5065**: there was almost no drift to
+  select away. Selection was solving a problem that wasn't the bottleneck.
+- The **seen/unseen-UID diagnostic** revealed the true ceiling: holdout AUC is
+  **0.9897 on clients seen in training** but **0.8990 on new clients**. The
+  private test set is mostly new clients ⇒ private ≈ 0.90. This one split
+  explains the entire drift-decay pattern seen across H1–H4 and EXP-006.
+
+**Corrected conclusion:** the gap to the winners is **entity resolution /
+linkability** — more and more-precise UIDs so that more test transactions link
+to a known client (the 2nd place's "the key is diversity [of proxy user ids]"),
+plus client-level label propagation. It is neither more aggregation (EXP-006:
+internal-only gain) nor feature selection (EXP-007: no private gain). The honest
+arc — a pre-registered claim, tested, refuted, and replaced by a diagnostic-driven
+mechanism — is itself the deliverable.
+
 ## Serving-boundary note (feeds ADR-006, Phase 9)
 
 The aggregation engine and post-processing are transductive/client-level: in
