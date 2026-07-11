@@ -1,0 +1,15 @@
+{
+  "id": "brunoramosmartins/exp-007-feature-selection",
+  "title": "EXP-007 Temporal Feature Selection",
+  "code_file": "k07-feature-selection.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "dataset_sources": [],
+  "competition_sources": ["ieee-fraud-detection"],
+  "kernel_sources": [],
+  "model_sources": []
+}
