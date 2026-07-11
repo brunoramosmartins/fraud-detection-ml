@@ -122,8 +122,38 @@ the expected result; the actual result is filled in afterwards. Protocol:
 | Feature diff | Replaces EXP-004's 4-aggregate block with Deotte's verified ~47-feature engine: (a) combine keys `card1_addr1`, `card1_addr1_P_emaildomain`; (b) `aggregate_group` mean/std of `TransactionAmt, D9, D11` at `card1 / card1_addr1 / card1_addr1_P_emaildomain`; (c) at the D1-based `uid`: mean/std of `TransactionAmt, D4, D9, D10, D15`, mean of `C1..C14` (except C3), mean of `M1..M9`, std of `C14`; (d) `aggregate_nunique` of `P_emaildomain, dist1, DT_M, id_02, cents, C13, V314, V127, V136, V309, V307, V320` at `uid`; (e) `outsider15 = (|D1−D15|>3)`; (f) frequency-encode all UIDs. NaN left native (deviation from Deotte's fillna(-1), consistent with our EXP-001+). Model/params unchanged (LightGBM, seed 42). |
 | Config | LightGBM identical to EXP-001..004. Aggregations label-free over the train+test union; categorical/UID frequency encoders keep the per-fit discipline. |
 | Expected | Confirmatory prediction: closes most of the verified +0.029 private gap to Deotte's single XGB (0.9324). Target private ~0.92–0.93; holdout Δ large vs EXP-004. This is the one experiment that tests "richness, not the key, is the lever." |
+| A (holdout AUC) | **0.9421** |
+| B (GroupKFold) | **0.9561 ± 0.0121** — per-fold: [0.9320, 0.9602, 0.9608, 0.9571, 0.9666, 0.9461, 0.9702] |
+| DeLong vs EXP-004 | ΔAUC **+0.0122** [95% CI +0.0099, +0.0145], z = 10.32, **p = 5.6e-25 — highly significant** |
+| LB public / private | **0.9377 / 0.9078** (SUB-006, 2026-07-11) — series best on every metric |
+| Verdict / notes | **Confirmatory result: aggregation richness is a real lever internally — but the drift-decay pattern strikes again, and it points to the true missing piece.** The engine (64 features vs EXP-004's 4) lifts the holdout by **+0.0122 (p=5.6e-25)** — the gap analysis was right that aggregation breadth carries large internal signal. **BUT** private LB gained only +0.0046 (0.9078 vs 0.9032), ~1/3 of the internal gain — the same internal-overstates-private pattern as H1/H2. Decisive sub-finding: the **CV−LB gap WIDENED** with more features (\|A−private\| rose 0.0267 → **0.0343**; \|B−private\| 0.0443 → **0.0483**). More features ⇒ more overfit to the training period ⇒ wider gap. **We faithfully replicated Deotte's aggregation engine (even richer: 64 vs 47) yet sit at private 0.9078 vs his 0.9324 — a ~0.025 gap that is NOT aggregation.** The remaining gap is what he (time-consistency selection) and the 2nd place (train/test screening, permutation-importance selection, forward-CV-with-gap) all did and we do not: **drop time-unstable features.** This makes EXP-007 (feature selection for temporal stability) the single highest-value next step — not more features. |
+
+---
+
+## EXP-005 — SKIPPED (numbering note)
+
+EXP-005 was reserved in the roadmap for "consolidation + seed averaging." It was
+**intentionally not run**: after EXP-004 the effort was redirected to the verified
+winning-solution gap analysis (`docs/kaggle/gap-analysis.md`), which produced the
+confirmatory EXP-006 (aggregation engine) as a higher-value use of the slot. The
+EXP-005 id is retired, not reused, to keep the experiment ledger append-only and
+traceable. Consolidation/seed-averaging, if done, will be a later id.
+
+---
+
+## EXP-007 — Confirmatory: temporal-stability feature selection
+
+| Field | Value |
+|---|---|
+| Registered | 2026-07-11 (before running) |
+| Hypothesis | none — confirmatory replication of the winners' validation/selection discipline (`docs/kaggle/validation-and-selection-playbook.md`) |
+| Notebook | `notebooks/kaggle/k07_feature_selection/` |
+| Predecessor | EXP-006 (same feature engine — this isolates the *selection* step) |
+| Feature diff | No new features. Applies selection to EXP-006's set: (a) **train/test screening** — drop raw high-cardinality ids `card1, card2, card3, card5, addr1, addr2` (keep their frequency encodings); (b) **adversarial validation** — fit a train-vs-test LightGBM, report AUC + top drifting features (diagnostic); (c) **time-consistency filter** (`src/features/selection.py`) — drop features whose signed univariate AUC flips sign or decays to noise between the first and last training month; (d) **seen/unseen-UID holdout segmentation** (diagnostic). Retrain LightGBM (same params) on the surviving features. |
+| Config | LightGBM identical to EXP-001..006. Selection computed on the Scheme-A train partition, then applied uniformly. |
+| Expected | The decisive test: selection should **shrink the CV−LB gap** (EXP-006: \|A−private\| = 0.0343) and *raise or hold* the private LB while possibly *lowering* the internal holdout — the signature of trading training-period overfit for temporal generalization. Success = private LB ≥ EXP-006's 0.9078 with a smaller CV−LB gap; the seen/unseen split should show the gain concentrated on unseen UIDs. |
 | A (holdout AUC) | *(pending)* |
 | B (GroupKFold) | *(pending)* |
-| DeLong vs EXP-004 | *(pending — off-notebook)* |
-| LB public / private | *(pending — see SUB-006)* |
+| DeLong vs EXP-006 | *(pending — off-notebook)* |
+| LB public / private | *(pending — see SUB-007)* |
 | Verdict / notes | *(pending)* |
