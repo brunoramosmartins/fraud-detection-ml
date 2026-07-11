@@ -1,0 +1,15 @@
+{
+  "id": "brunoramosmartins/exp-002-categoricals-h2",
+  "title": "EXP-002 Categoricals - H2",
+  "code_file": "k02-categoricals.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "dataset_sources": [],
+  "competition_sources": ["ieee-fraud-detection"],
+  "kernel_sources": [],
+  "model_sources": []
+}

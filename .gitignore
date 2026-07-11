@@ -3,6 +3,13 @@
 # ==============================
 .kaggle/
 kaggle.json
+
+# ==============================
+# Local Planning (never committed)
+# ==============================
+ROADMAP-KAGGLE.md
+.github/setup/
+.claude/
 .env
 .env.*
 
@@ -82,3 +89,5 @@ artifacts/monitoring/
 dist/
 build/
 *.egg-info/
+.coverage
+xgb-fraud-with-magic-0-9600.ipynb

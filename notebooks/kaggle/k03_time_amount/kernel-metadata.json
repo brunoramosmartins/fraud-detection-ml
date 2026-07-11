@@ -1,0 +1,15 @@
+{
+  "id": "brunoramosmartins/exp-003-time-amount-exploratory",
+  "title": "EXP-003 Time Amount - Exploratory",
+  "code_file": "k03-time-amount.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "dataset_sources": [],
+  "competition_sources": ["ieee-fraud-detection"],
+  "kernel_sources": [],
+  "model_sources": []
+}

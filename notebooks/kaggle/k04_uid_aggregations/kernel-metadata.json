@@ -1,0 +1,15 @@
+{
+  "id": "brunoramosmartins/exp-004-uid-aggregations-h3",
+  "title": "EXP-004 UID Aggregations - H3",
+  "code_file": "k04-uid-aggregations.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "dataset_sources": [],
+  "competition_sources": ["ieee-fraud-detection"],
+  "kernel_sources": [],
+  "model_sources": []
+}
