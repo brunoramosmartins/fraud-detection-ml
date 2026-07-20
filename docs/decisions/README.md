@@ -16,3 +16,5 @@ downsides of the chosen approach.
 | [ADR-003](ADR-003-temporal-validation-only.md) | Temporal split as the only valid validation strategy | Accepted |
 | [ADR-004](ADR-004-feature-contract-fail-fast.md) | Feature contract enforcement: fail-fast on missing columns | Accepted |
 | [ADR-005](ADR-005-app-state-for-model-storage.md) | `app.state` for runtime model storage | Accepted |
+| [ADR-006](ADR-006-kaggle-features-vs-serving.md) | Which Kaggle feature blocks cross the serving boundary | Accepted |
+| [ADR-007](ADR-007-lightgbm-over-sklearn-gb.md) | LightGBM replaces sklearn GradientBoosting for Phase 8+ | Accepted |
