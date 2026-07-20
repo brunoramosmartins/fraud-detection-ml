@@ -1,0 +1,19 @@
+version: "v2"
+feature_set: "v2"
+split_quantile: 0.8
+c_fp: 5.0  # cost per false positive (manual review cost)
+
+# Hyperparameters are the EXP-003 configuration (ADR-006: v2 == the
+# serving-feasible Kaggle setup; see docs/kaggle/experiment-registry.md).
+# n_estimators approximates the Kaggle runs' early-stopped round count;
+# the Phase 9 retrain records the exact value used.
+models:
+  lgbm:
+    n_estimators: 1000
+    learning_rate: 0.05
+    num_leaves: 192
+    min_data_in_leaf: 100
+    feature_fraction: 0.8
+    bagging_fraction: 0.8
+    bagging_freq: 1
+    random_state: 42

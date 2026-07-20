@@ -25,8 +25,54 @@ def _as_str(values: pd.Series) -> pd.Series:
     )
 
 
+def fit_frequency_table(train_values: pd.Series) -> Dict[str, float]:
+    """Fit a category -> relative-frequency table from training values.
+
+    Args:
+        train_values: Column the frequency table is fit on (training rows
+            only). Missing values are treated as a category of their own.
+
+    Returns:
+        Plain dict mapping each category (string) to its relative frequency
+        among ``train_values``. Being a plain dict, the table serializes
+        with the model artifact (ADR-006: frozen training-time state).
+
+    Leakage argument:
+        The table is computed exclusively from ``train_values`` (past
+        data); it is the frozen state a serving system ships alongside the
+        model.
+    """
+    return _as_str(train_values).value_counts(normalize=True).to_dict()
+
+
+def apply_frequency_table(table: Dict[str, float], values: pd.Series) -> pd.Series:
+    """Apply a fitted frequency table to a column.
+
+    Args:
+        table: Output of :func:`fit_frequency_table`.
+        values: Column to encode (training, validation, holdout, test, or a
+            single serving-time row).
+
+    Returns:
+        Float32 series aligned with ``values``. Categories absent from the
+        table map to 0.0.
+
+    Leakage argument:
+        A fixed-table lookup is row-local: no information from the scored
+        rows - present or future - enters the encoding. The 0.0 fallback
+        for unseen categories is exactly the behavior available in
+        production for a never-observed value.
+    """
+    return _as_str(values).map(table).fillna(0.0).astype("float32")
+
+
 def frequency_encode(train_values: pd.Series, values: pd.Series) -> pd.Series:
     """Encode categories by their relative frequency in the training data.
+
+    Composition of :func:`fit_frequency_table` and
+    :func:`apply_frequency_table` for callers that hold the training
+    column (notebooks, per-fold CV). Serving code fits once and applies
+    the frozen table instead.
 
     Args:
         train_values: Column the frequency table is fit on (training rows
@@ -48,12 +94,55 @@ def frequency_encode(train_values: pd.Series, values: pd.Series) -> pd.Series:
         categories is exactly the behavior available in production for a
         never-observed value.
     """
-    freq = _as_str(train_values).value_counts(normalize=True)
-    return _as_str(values).map(freq).fillna(0.0).astype("float32")
+    return apply_frequency_table(fit_frequency_table(train_values), values)
+
+
+def fit_label_map(train_values: pd.Series) -> Dict[str, int]:
+    """Fit a category -> integer-code dictionary from training values.
+
+    Args:
+        train_values: Column the dictionary is fit on (training rows only).
+            Categories are sorted before code assignment so the mapping is
+            deterministic across runs.
+
+    Returns:
+        Plain dict mapping each category (string) to its integer code.
+        Serializes with the model artifact (ADR-006).
+
+    Leakage argument:
+        Built from training values only and frozen; the serving-time
+        counterpart of the fit half of :func:`label_encode`.
+    """
+    return {v: i for i, v in enumerate(sorted(_as_str(train_values).unique()))}
+
+
+def apply_label_map(mapping: Dict[str, int], values: pd.Series) -> pd.Series:
+    """Apply a fitted label dictionary to a column.
+
+    Args:
+        mapping: Output of :func:`fit_label_map`.
+        values: Column to encode.
+
+    Returns:
+        Int32 series aligned with ``values``. Categories absent from the
+        mapping (including a missing value when training had none) map
+        to -1.
+
+    Leakage argument:
+        Applying a fixed dictionary row-by-row requires no knowledge of
+        other scored rows or of the future; unseen categories degrade
+        gracefully to the -1 sentinel, the same behavior a serving system
+        exhibits for a brand-new category.
+    """
+    return _as_str(values).map(mapping).fillna(-1).astype("int32")
 
 
 def label_encode(train_values: pd.Series, values: pd.Series) -> pd.Series:
     """Encode categories as integer codes from a training-fit dictionary.
+
+    Composition of :func:`fit_label_map` and :func:`apply_label_map` for
+    callers that hold the training column (notebooks, per-fold CV).
+    Serving code fits once and applies the frozen dictionary instead.
 
     Args:
         train_values: Column the category dictionary is fit on (training
@@ -73,10 +162,7 @@ def label_encode(train_values: pd.Series, values: pd.Series) -> pd.Series:
         degrade gracefully to the -1 sentinel, the same behavior a serving
         system exhibits for a brand-new category.
     """
-    cats: Dict[str, int] = {
-        v: i for i, v in enumerate(sorted(_as_str(train_values).unique()))
-    }
-    return _as_str(values).map(cats).fillna(-1).astype("int32")
+    return apply_label_map(fit_label_map(train_values), values)
 
 
 def split_email_domain(values: pd.Series, prefix: str) -> pd.DataFrame:
