@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import Any, Dict
 
 import yaml
-
 from sklearn.pipeline import Pipeline
 
 from src.data.loader import load_full_training_dataset
