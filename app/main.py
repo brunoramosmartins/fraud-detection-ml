@@ -45,8 +45,8 @@ class PredictionResponse(BaseModel):
 
 
 # Which artifact family to serve; overridable without a code change
-# (e.g. DEPLOYED_MODEL_GLOB="lgbm_v2_*.pkl" after the Phase 9 retrain).
-DEFAULT_MODEL_GLOB = "gb_v1_*.pkl"
+# (e.g. DEPLOYED_MODEL_GLOB="gb_v1_*.pkl" to roll back to the v1 model).
+DEFAULT_MODEL_GLOB = "lgbm_v2_*.pkl"
 
 
 def _load_deployed_model(app: FastAPI) -> None:

@@ -15,7 +15,7 @@ PYTHON    := .venv/Scripts/python
 PIP       := .venv/Scripts/pip
 PYTEST    := .venv/Scripts/pytest
 UVICORN   := .venv/Scripts/uvicorn
-CONFIG    := configs/model_gb_v1.yml
+CONFIG    := configs/model_lgbm_v2.yml
 REFERENCE := data/raw/train_transaction.csv
 
 .PHONY: setup train test api simulate monitor demo clean help
@@ -30,8 +30,8 @@ setup:
 
 # ── Training ─────────────────────────────────────────────────────────────────
 train:
-	@echo ">>> Training Gradient Boosting model..."
-	$(PYTHON) scripts/train_model.py --model gb --config $(CONFIG)
+	@echo ">>> Training LightGBM v2 model (served)..."
+	$(PYTHON) scripts/train_model.py --model lgbm --config $(CONFIG)
 	@echo ">>> Model artifact saved to artifacts/models/"
 
 # ── Tests ────────────────────────────────────────────────────────────────────
@@ -104,7 +104,7 @@ clean:
 help:
 	@echo "Available targets:"
 	@echo "  setup     Install dev dependencies"
-	@echo "  train     Train the GB model"
+	@echo "  train     Train the served LightGBM v2 model"
 	@echo "  test      Run pytest suite"
 	@echo "  api       Start FastAPI on port 8000"
 	@echo "  simulate  Send transaction batches to API"

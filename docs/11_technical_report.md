@@ -60,20 +60,20 @@ The **approve-all baseline** computes EML at threshold=1.0, where all transactio
 baseline_loss = Σ(fraud_transaction_amounts)
 ```
 
-The baseline on the validation set is **$609,934**. The model reduces this to **$251,945** — a 58.7% reduction.
+The baseline on the validation set is **$609,934**. The served model (v2) reduces this to **$174,832** — a 71.3% reduction (v1: $251,945, 58.7%).
 
-**Threshold selection** is performed via a discrete sweep over [0.01, 0.99] in 0.01 increments. The threshold that minimizes EML is selected as the operating point. On this dataset, `threshold* = 0.02`.
+**Threshold selection** is performed via a discrete sweep. The original grid covered [0.01, 0.99] in 0.01 increments; the Phase 9 calibration analysis showed this clips the optimum for a well-separated model, so the grid now extends down to 0.001 in fine steps. On this dataset, `threshold* = 0.003` for v2 (v1 operated at 0.02; at the clipped 0.01 the v2 model leaves ~$18k of avoidable loss on the table).
 
 The low optimal threshold reflects two structural properties of the problem: (1) severe class imbalance means the model assigns low absolute probabilities even to fraud cases, so the threshold must be correspondingly low to capture them; and (2) the asymmetric cost structure (fraud loss >> c_fp) incentivizes aggressive flagging to minimize missed fraud.
 
-**Supporting metrics** recorded at the optimal threshold:
+**Supporting metrics** recorded at the optimal threshold (v1 kept as the before/after comparison):
 
-| Metric | Value | Interpretation |
-|---|---|---|
-| ROC-AUC | 0.861 | Strong discrimination across all thresholds |
-| PR-AUC | 0.409 | Strong precision–recall trade-off for rare positives |
-| Precision at threshold | 0.101 | 10.1% of flagged transactions are real fraud |
-| FPR at threshold | 0.259 | 25.9% of legitimate transactions are flagged |
+| Metric | v1 (sklearn GB) | v2 (LightGBM, served) | Interpretation |
+|---|---|---|---|
+| ROC-AUC | 0.861 | **0.930** | Strong discrimination across all thresholds |
+| PR-AUC | 0.409 | **0.629** | Precision–recall trade-off for rare positives |
+| Precision at threshold | 0.101 | **0.180** | Fraction of flagged transactions that are real fraud |
+| FPR at threshold | 0.259 | **0.138** | Fraction of legitimate transactions flagged |
 
 Note: in `src/models/metrics.py`, the stored metric `precision` is `TP/(TP+FP)` — the fraction of flagged transactions that are actual fraud.
 
@@ -81,15 +81,19 @@ Note: in `src/models/metrics.py`, the stored metric `precision` is `TP/(TP+FP)` 
 
 ## 4. Feature Engineering
 
-Feature construction is handled in `src/features/pipeline.py` via `build_features()`. The implementation:
+Feature construction lives in `src/features/pipeline.py` and has two generations:
+
+**v1 — `build_features()`** (stateless):
 
 1. Calls `get_feature_list(df, feature_set="v1")` which returns all numeric columns excluding `isFraud`, `TransactionID`, and `TransactionDT`.
 2. Selects those columns from the dataframe and applies `fillna(0.0)`.
 3. Returns `(X, feature_list)` where `feature_list` is the ordered list used for this training run.
 
-The `feature_list` is serialized in the model metadata JSON. At inference time, the API reads this list from `_meta.json` and enforces it as a hard contract — the payload must contain exactly those columns.
+**v2 — `FeatureBuilderV2`** (stateful fit/transform, the served path since Phase 9): fits label/frequency-encoding tables on the train partition only, freezes them, and builds 494 engineered features (numeric base + categorical encodings + email split + time/amount + D-normalization) from 432 raw columns. The fitted builder is serialized *inside* the model artifact as the first step of a sklearn `Pipeline`, so `predict_proba` takes raw request columns. Which feature blocks were allowed to cross the research-to-serving boundary — and why UID aggregations were not — is documented in ADR-006.
 
-**Imputation strategy**: `fillna(0.0)` is applied uniformly. This is a deliberate simplification with known implications (see `docs/12_trade_off_analysis.md`). The assumption is that missingness is informative and that zero-filling preserves the signal that a feature was absent, which for count-based and behavioral features (the C- and D-series columns) may carry meaning. For production use, imputation strategy should be validated against real missingness mechanisms.
+The `feature_list` is serialized in the model metadata JSON. At inference time, the API reads this list from `_meta.json` and enforces it as a hard contract — the payload must contain exactly those columns (for v2, the raw input columns).
+
+**Imputation strategy**: v1 applied `fillna(0.0)` uniformly — a deliberate simplification with known implications (see `docs/12_trade_off_analysis.md`). v2 removes imputation entirely: LightGBM routes missing values natively at each split, which keeps "missing" distinct from a legitimate zero. The API respects this via the `imputation: "native"` metadata flag (it must not zero-fill v2 payloads).
 
 **Feature groups** in the dataset:
 

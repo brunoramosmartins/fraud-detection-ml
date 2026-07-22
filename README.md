@@ -2,9 +2,10 @@
 
 > End-to-end machine learning system for card-not-present fraud detection — from raw data to a containerized inference API with drift monitoring and automated retraining simulation.
 
-![Python](https://img.shields.io/badge/Python-3.10-blue)
-![scikit-learn](https://img.shields.io/badge/scikit--learn-1.7-orange)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.135-green)
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+![LightGBM](https://img.shields.io/badge/LightGBM-4.x-yellow)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-1.7%2B-orange)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.1xx-green)
 ![Docker](https://img.shields.io/badge/Docker-ready-blue)
 ![pytest](https://img.shields.io/badge/tests-115%20passing-brightgreen)
 ![CI](https://img.shields.io/badge/CI-GitHub%20Actions-blue)
@@ -14,17 +15,28 @@
 
 ## Key Results
 
-| Metric | Value |
-|---|---|
-| ROC-AUC | **0.861** |
-| PR-AUC | **0.409** |
-| Expected Loss Reduction | **58.7%** ($357,989 vs $609,934 baseline) |
-| Operating Threshold | **0.02** (cost-minimization optimized) |
-| Precision at threshold | 10.1% (industry-typical for fraud at 3.5% base rate) |
-| Features | 380 numeric features (transaction + identity) |
-| Dataset | IEEE-CIS · ~590,000 transactions |
+The served model is **v2** (Phase 9): LightGBM on the serving-feasible subset of
+the Kaggle feature blocks, as decided in
+[ADR-006](docs/decisions/ADR-006-kaggle-features-vs-serving.md). The v1 column
+is the original sklearn Gradient Boosting system, kept as the before/after
+comparison.
 
-> Metrics evaluated on a temporal hold-out set (most recent 20% of transactions). No data leakage.
+| Metric | v1 (sklearn GB) | **v2 (LightGBM, served)** |
+|---|---|---|
+| ROC-AUC | 0.861 | **0.930** |
+| PR-AUC | 0.409 | **0.629** |
+| Expected Loss Reduction | 58.7% ($357,989) | **71.3% ($435,102)** |
+| Residual expected loss | $251,945 | **$174,832** (vs $609,934 baseline) |
+| Operating Threshold | 0.02 | **0.003** (EML-optimal, fine grid) |
+| Precision at threshold | 10.1% | **18.0%** |
+| FPR at threshold | 25.9% | **13.8%** |
+| Features | 380 numeric | **494 engineered** from 432 raw inputs |
+| Dataset | IEEE-CIS · ~590,000 transactions | same |
+
+> Metrics evaluated on a temporal hold-out set (most recent 20% of transactions).
+> No data leakage: v2 encoders are fit on the train partition only and frozen
+> into the artifact. Per-prediction explanations via native TreeSHAP
+> (`scripts/shap_analysis.py`).
 
 ### Kaggle Extension (Phase 8)
 
@@ -85,6 +97,7 @@ graph LR
 | **6** | Communication | Executive reporting, trade-off analysis, technical documentation |
 | **7** | Interview readiness | Architecture diagrams, ADRs, hyperparameter analysis, demo runbook |
 | **8** | Kaggle-competitive modeling | LightGBM, entity/UID aggregation, DeLong AUC tests, pre-registered hypotheses, temporal-drift diagnostics |
+| **9** | Production reintegration | Research-to-serving boundary (ADR-006), stateful feature builder, calibration analysis, TreeSHAP explainability, EML operating-point tuning |
 
 ---
 
@@ -126,6 +139,10 @@ Architecture diagrams, hyperparameter analysis, Architecture Decision Records, e
 Reframed modeling as a pre-registered research question (H1–H4) on the IEEE-CIS leaderboard. Built a LightGBM pipeline with categorical encodings, time/amount features, and entity (UID) aggregations replicating the competition's winning technique. Every experiment registered before running and every submission logged before upload; AUC comparisons via the DeLong test on a temporal holdout. Reached single-model private LB 0.9078 and established that internal validation overstates private-LB gains under temporal drift.
 → [`docs/kaggle/research.md`](docs/kaggle/research.md) · [`docs/kaggle/gap-analysis.md`](docs/kaggle/gap-analysis.md) · [`docs/kaggle/fe-playbook.md`](docs/kaggle/fe-playbook.md) · [`docs/kaggle/validation-and-selection-playbook.md`](docs/kaggle/validation-and-selection-playbook.md)
 
+**Phase 9 — Production Reintegration** *(extension)*
+Ported the serving-feasible Kaggle feature blocks into the production system under an explicit boundary decision (ADR-006): categorical encodings as frozen lookup tables, row-local time/amount/D-normalization features, LightGBM with native NaN handling — UID aggregations deliberately excluded (they require a client feature store and their gains concentrate on already-seen clients). Retrained locally, re-swept the EML operating point on a finer grid (0.003, −9.4% expected loss vs the clipped grid), ran a leak-free isotonic calibration test (not adopted: monotone calibration cannot improve optimal-threshold EML), and added per-prediction TreeSHAP explanations. Served holdout AUC: 0.861 → 0.930.
+→ [`docs/decisions/ADR-006-kaggle-features-vs-serving.md`](docs/decisions/ADR-006-kaggle-features-vs-serving.md) · [`docs/decisions/ADR-007-lightgbm-over-sklearn-gb.md`](docs/decisions/ADR-007-lightgbm-over-sklearn-gb.md) · [`scripts/calibration_check.py`](scripts/calibration_check.py) · [`scripts/shap_analysis.py`](scripts/shap_analysis.py)
+
 ---
 
 ## Quick Start
@@ -140,8 +157,8 @@ make setup                   # creates .venv and installs the project + dev extr
 make demo
 
 # Or step by step
-make train                   # train GB model
-make test                    # run 28 unit tests with coverage
+make train                   # train the served LightGBM v2 model
+make test                    # run the test suite with coverage
 make api                     # start API on port 8000 (Terminal 1)
 make simulate                # score 500 transactions (Terminal 2)
 make monitor                 # compute PSI and performance metrics
@@ -154,7 +171,7 @@ See [`DEMO.md`](DEMO.md) for the full interview walkthrough with anticipated que
 ```bash
 python -m venv .venv && source .venv/Scripts/activate  # Windows
 pip install -e ".[dev]"
-python scripts/train_model.py --model gb --config configs/model_gb_v1.yml
+python scripts/train_model.py --model lgbm --config configs/model_lgbm_v2.yml
 python -m pytest tests/ -v
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
