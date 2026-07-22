@@ -85,9 +85,11 @@ README (Key Results before/after table, badges, phases, skills), docs/10–13,
 `notebooks/06_results_dashboard.ipynb` (parametrized on `MODEL_GLOB`, handles
 the v2 Pipeline, fine grid, cleared stale outputs), docs/09 (commands, rollback
 env var), and the Makefile. v2 promoted to the API default
-(`DEFAULT_MODEL_GLOB="lgbm_v2_*.pkl"`, v1 one env var away). DEMO.md's interview
-narrative deferred to Phase 10 (#32) — it needs a substantive rewrite, not a
-number swap.
+(`DEFAULT_MODEL_GLOB="lgbm_v2_*.pkl"`, v1 one env var away). The interview
+runbook was un-tracked (kept as personal local notes, gitignored) and its
+references removed from the README and Makefile; the public-facing interview
+material moves to Phase 10's README Kaggle Results section (#31) and the public
+notebook (#30) instead of a versioned runbook.
 
 ## Issue #29 — API contract test
 

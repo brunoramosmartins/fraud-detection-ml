@@ -86,8 +86,6 @@ demo: train test
 	@echo ""
 	@echo "  API health check:"
 	@echo "    curl http://localhost:8000/health"
-	@echo ""
-	@echo "  See DEMO.md for the full interview walkthrough."
 	@echo "============================================================"
 
 # ── Clean ────────────────────────────────────────────────────────────────────

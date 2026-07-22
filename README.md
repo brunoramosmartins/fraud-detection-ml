@@ -132,8 +132,8 @@ Executive summary, technical deep-dive, trade-off analysis, model limitations, a
 → [`docs/10_executive_summary.md`](docs/10_executive_summary.md) · [`docs/11_technical_report.md`](docs/11_technical_report.md)
 
 **Phase 7 — Interview Maximization**
-Architecture diagrams, hyperparameter analysis, Architecture Decision Records, extensions roadmap, and demo runbook.
-→ [`docs/diagrams/01_system_architecture.md`](docs/diagrams/01_system_architecture.md) · [`docs/14_hyperparameter_guide.md`](docs/14_hyperparameter_guide.md) · [`docs/decisions/`](docs/decisions/) · [`DEMO.md`](DEMO.md)
+Architecture diagrams, hyperparameter analysis, Architecture Decision Records, and extensions roadmap.
+→ [`docs/diagrams/01_system_architecture.md`](docs/diagrams/01_system_architecture.md) · [`docs/14_hyperparameter_guide.md`](docs/14_hyperparameter_guide.md) · [`docs/decisions/`](docs/decisions/)
 
 **Phase 8 — Kaggle-Competitive Modeling** *(extension)*
 Reframed modeling as a pre-registered research question (H1–H4) on the IEEE-CIS leaderboard. Built a LightGBM pipeline with categorical encodings, time/amount features, and entity (UID) aggregations replicating the competition's winning technique. Every experiment registered before running and every submission logged before upload; AUC comparisons via the DeLong test on a temporal holdout. Reached single-model private LB 0.9078 and established that internal validation overstates private-LB gains under temporal drift.
@@ -163,8 +163,6 @@ make api                     # start API on port 8000 (Terminal 1)
 make simulate                # score 500 transactions (Terminal 2)
 make monitor                 # compute PSI and performance metrics
 ```
-
-See [`DEMO.md`](DEMO.md) for the full interview walkthrough with anticipated questions and answers.
 
 ### Manual Setup (without Make)
 
@@ -225,12 +223,10 @@ fraud-detection-ml/
 ├── Dockerfile
 ├── docker-compose.yml          # One-command deployment
 ├── Makefile                    # One-command demo pipeline
-├── pyproject.toml              # Project metadata, pytest, ruff config
+├── pyproject.toml              # Project metadata, dependencies, tool config (pytest, ruff)
 ├── .pre-commit-config.yaml     # Ruff linting and formatting hooks
 ├── .github/workflows/ci.yml   # CI: lint + test + coverage
-├── DEMO.md                     # Interview runbook with Q&A
-├── CONTRIBUTING.md             # Dev setup and commit conventions
-└── pyproject.toml              # Project metadata, dependencies, tool config
+└── CONTRIBUTING.md             # Dev setup and commit conventions
 ```
 
 ---
@@ -239,7 +235,6 @@ fraud-detection-ml/
 
 | Document | Audience | Description |
 |---|---|---|
-| [`DEMO.md`](DEMO.md) | Interview | 5-minute walkthrough, commands, anticipated Q&A |
 | [`docs/10_executive_summary.md`](docs/10_executive_summary.md) | Business | Non-technical summary with monetary impact |
 | [`docs/11_technical_report.md`](docs/11_technical_report.md) | Engineering | Architecture, modeling decisions, production gap |
 | [`docs/12_trade_off_analysis.md`](docs/12_trade_off_analysis.md) | Engineering | 6 trade-offs with rejected alternatives |
