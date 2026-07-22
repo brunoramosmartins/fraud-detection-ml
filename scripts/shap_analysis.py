@@ -66,9 +66,6 @@ def main() -> None:
     if not model_files:
         raise FileNotFoundError(f"No artifact matching {args.model_glob} in {MODELS_DIR}")
     model_path = model_files[-1]
-    meta = json.loads(
-        model_path.with_name(model_path.stem + "_meta.json").read_text(encoding="utf-8")
-    )
     artifact = joblib.load(model_path)
     builder, clf = artifact.steps[0][1], artifact.steps[-1][1]
     print(f"Artifact : {model_path.name}")
