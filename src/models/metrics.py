@@ -196,6 +196,9 @@ def reliability_table(
     p = np.asarray(proba, dtype=float)
     if strategy == "quantile":
         edges = np.unique(np.quantile(p, np.linspace(0.0, 1.0, n_bins + 1)))
+        if len(edges) == 1:
+            # Constant scores: every quantile ties -> a single degenerate bin
+            edges = np.repeat(edges, 2)
     elif strategy == "uniform":
         edges = np.linspace(0.0, 1.0, n_bins + 1)
     else:
