@@ -88,6 +88,7 @@ def run_training_pipeline(
 
     metadata = {
         "model_name": model_name,
+        "version": config.get("version", "v1"),
         "feature_set": feature_set,
         "feature_list": feature_list,
         "dataset_version": dataset_version,

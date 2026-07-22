@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import List
@@ -43,20 +44,32 @@ class PredictionResponse(BaseModel):
     predictions: List[PredictionItem]
 
 
+# Which artifact family to serve; overridable without a code change
+# (e.g. DEPLOYED_MODEL_GLOB="lgbm_v2_*.pkl" after the Phase 9 retrain).
+DEFAULT_MODEL_GLOB = "gb_v1_*.pkl"
+
+
 def _load_deployed_model(app: FastAPI) -> None:
     """
     Load the latest deployed model artifact and its metadata into app.state.
 
     State keys set:
-        app.state.model         – fitted sklearn estimator
-        app.state.feature_list  – ordered list of feature column names
+        app.state.model         – fitted estimator (v2: feature-builder +
+                                  classifier pipeline taking raw columns)
+        app.state.feature_list  – ordered list of feature column names the
+                                  request must provide
         app.state.threshold     – classification threshold
-        app.state.model_name    – logical model name (e.g. "gb")
-        app.state.model_version – version string (e.g. "v1")
+        app.state.model_name    – logical model name (e.g. "gb", "lgbm")
+        app.state.model_version – version string (e.g. "v1", "v2")
+        app.state.native_nan    – True when the artifact handles NaN itself
+                                  (v2 / LightGBM); the API must NOT impute
     """
-    model_files = sorted(MODELS_DIR.glob("gb_v1_*.pkl"))
+    model_glob = os.environ.get("DEPLOYED_MODEL_GLOB", DEFAULT_MODEL_GLOB)
+    model_files = sorted(MODELS_DIR.glob(model_glob))
     if not model_files:
-        raise RuntimeError("No deployed model artifact found in artifacts/models")
+        raise RuntimeError(
+            f"No deployed model artifact matching {model_glob!r} in artifacts/models"
+        )
 
     model_path = model_files[-1]
     meta_path = model_path.with_name(model_path.stem + "_meta.json")
@@ -66,10 +79,14 @@ def _load_deployed_model(app: FastAPI) -> None:
     app.state.model_name = "gb"
     app.state.model_version = "v1"
     app.state.threshold = 0.5
+    app.state.native_nan = False
 
     if meta_path.exists():
         meta = json.loads(Path(meta_path).read_text(encoding="utf-8"))
         app.state.feature_list = meta.get("feature_list")
+        app.state.model_name = meta.get("model_name", app.state.model_name)
+        app.state.model_version = meta.get("version", app.state.model_version)
+        app.state.native_nan = meta.get("imputation") == "native"
         metrics = meta.get("metrics") or {}
         app.state.threshold = float(metrics.get("best_threshold", 0.5))
 
@@ -110,6 +127,7 @@ def predict(payload: PredictionRequest, req: Request) -> PredictionResponse:
     threshold = getattr(req.app.state, "threshold", 0.5)
     model_name = getattr(req.app.state, "model_name", "gb")
     model_version = getattr(req.app.state, "model_version", "v1")
+    native_nan = getattr(req.app.state, "native_nan", False)
 
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
@@ -130,7 +148,11 @@ def predict(payload: PredictionRequest, req: Request) -> PredictionResponse:
             detail=f"Missing required features for inference: {missing}",
         )
 
-    X = df[feature_list].copy().fillna(0.0)
+    X = df[feature_list].copy()
+    if not native_nan:
+        # v1 contract only: v2 artifacts encode/impute internally, and
+        # filling raw NaN with 0 would corrupt LightGBM's native handling.
+        X = X.fillna(0.0)
     proba = model.predict_proba(X)[:, 1]
 
     preds: List[PredictionItem] = [

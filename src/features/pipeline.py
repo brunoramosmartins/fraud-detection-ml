@@ -127,7 +127,9 @@ class FeatureBuilderV2:
             + [f"{c}_freq" for c in self.freq_cols_]
         )
 
-        email_outputs = {f"{p}_{part}" for _, p in self.email_splits for part in ("provider", "suffix")}
+        email_outputs = {
+            f"{p}_{part}" for _, p in self.email_splits for part in ("provider", "suffix")
+        }
         raw_needed = set(self.numeric_features_) - email_outputs
         raw_needed |= {src for src, _ in self.email_splits}
         raw_needed |= set(self.label_cols_) - email_outputs
