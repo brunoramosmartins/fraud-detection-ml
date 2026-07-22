@@ -70,9 +70,23 @@ maintains for their own prep. Confirm this reframing before closing.
 
 ## Lessons Learned
 
-<!-- Author to complete in first person at phase close — interview/writeup
-     material, in your own words. -->
+Phase 10 was mostly execution of a well-scoped plan, so the substantive
+modeling and validation lessons live in Phase 9. One process lesson did stick:
+**validate a generated artifact against what is actually written to disk, not a
+reconstruction of it.** My first notebook validator rebuilt the newlines before
+parsing, so it passed while the on-disk file was broken - and Kaggle's papermill
+then concatenated the lines into a syntax error. The fix was to parse the exact
+stored `source`. It generalizes: test the artifact, not your mental model of it.
 
 ## Failed Attempts
 
-<!-- Author to complete in first person at phase close. -->
+- **Notebook `source` saved as a list of newline-less lines.** papermill joined
+  them into one line on Kaggle -> `SyntaxError` on the first cell. Fixed by
+  storing each cell's `source` as a single string with embedded newlines (and
+  adding cell `id` fields to silence the nbformat warning).
+- **A recreated `kaggle.json` shadowed the bearer token.** Its username/key
+  triggered the basic-auth flow that does not work with the KGAT_ token (a 401
+  waiting to happen); moved it aside so the CLI used `KAGGLE_API_TOKEN`.
+- **Recreating the venv silently dropped the `kaggle` CLI** - it had never been
+  a project dependency. Added a `[kaggle]` optional extra to `pyproject.toml` so
+  it is reproducible.
