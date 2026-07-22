@@ -1,0 +1,22 @@
+{
+  "run_id": "20260722_121233",
+  "model_name": "lgbm",
+  "config_file": "configs\\model_lgbm_v2.yml",
+  "start_time": "2026-07-22T12:12:33.734309",
+  "metrics": {
+    "roc_auc": 0.9295877038548735,
+    "pr_auc": 0.6287628541055443,
+    "baseline_loss": 609934.336,
+    "best_threshold": 0.01,
+    "best_loss": 192942.658,
+    "expected_loss_reduction": 416991.678,
+    "precision": 0.2894365534756843,
+    "fpr": 0.06623759250815475
+  },
+  "artifact_paths": [
+    "C:\\Users\\bruno\\Desktop\\Projetos\\fraud-detection-ml\\artifacts\\models\\lgbm_v2_20260722_121628.pkl",
+    "C:\\Users\\bruno\\Desktop\\Projetos\\fraud-detection-ml\\artifacts\\models\\lgbm_v2_20260722_121628_meta.json"
+  ],
+  "dataset_version": "ieee-cis-original",
+  "end_time": "2026-07-22T12:16:29.172923"
+}

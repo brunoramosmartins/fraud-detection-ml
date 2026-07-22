@@ -22,7 +22,7 @@ This document records the key design decisions made throughout the project, the 
 
 ## Trade-off 2 — Threshold Strategy: Fixed vs. Dynamic
 
-**Decision made:** A fixed threshold (0.02) selected by minimizing Expected Monetary Loss at training time, stored in model metadata, and applied at inference time.
+**Decision made:** A fixed threshold selected by minimizing Expected Monetary Loss at training time, stored in model metadata, and applied at inference time (v1: 0.02; v2: 0.003 — the sharper model pushes the cost-optimal point lower, and the Phase 9 calibration analysis extended the sweep grid below 0.01 to find it).
 
 **Alternatives considered:**
 
@@ -66,7 +66,7 @@ This document records the key design decisions made throughout the project, the 
 
 *PSI for top-N features by importance*: a practical middle ground that monitors the features that most influence model predictions. Requires that `feature_importances_` be stored in model metadata (not currently done) and then selecting the top-N by importance. This is the correct production approach.
 
-*Score distribution monitoring*: monitor the distribution of output probabilities directly. Score drift is often the earliest, most actionable signal: if the fraction of transactions scoring above 0.02 changes substantially, the model's effective operating point has shifted even if input features have not. Not implemented but easier to compute than feature-level PSI.
+*Score distribution monitoring*: monitor the distribution of output probabilities directly. Score drift is often the earliest, most actionable signal: if the fraction of transactions scoring above the operating threshold changes substantially, the model's effective operating point has shifted even if input features have not. Not implemented but easier to compute than feature-level PSI.
 
 **When to choose differently:** in production, the monitoring scope should be: (1) score distribution (always), (2) top-10 features by importance, and (3) any feature known to be sensitive to business changes (e.g., a new card program launches and `card1` distribution shifts). The current single-feature implementation is a proof of concept, not a production monitoring strategy.
 

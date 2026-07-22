@@ -38,28 +38,37 @@ Main components:
 ### Prerequisites
 
 ```bash
-# Install production dependencies
-pip install -r requirements.txt
+# Install production dependencies only
+pip install -e .
 
-# Install dev / test dependencies
-pip install -r requirements-dev.txt
+# Install with dev / test dependencies
+pip install -e ".[dev]"
 ```
 
 ### Step 1 — Train a model
 
 ```bash
 python scripts/train_model.py \
-  --model gb \
-  --config configs/gb_v1.yaml \
+  --model lgbm \
+  --config configs/model_lgbm_v2.yml \
   --dataset-version ieee-cis-original
 ```
 
-Artifacts written to `artifacts/models/gb_v1_<timestamp>.pkl` and `…_meta.json`.
+Artifacts written to `artifacts/models/lgbm_v2_<timestamp>.pkl` and `…_meta.json`.
+(The v1 pipeline remains available: `--model gb --config configs/model_gb_v1.yml`.)
 
 ### Step 2 — Start the scoring API
 
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+The API serves the newest artifact matching `DEPLOYED_MODEL_GLOB`
+(default `lgbm_v2_*.pkl`). To roll back to the v1 model without a code
+change:
+
+```bash
+DEPLOYED_MODEL_GLOB="gb_v1_*.pkl" uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 Or with Docker:
@@ -103,7 +112,7 @@ Reports written to:
 
 ```bash
 python scripts/retrain_model.py \
-  --config configs/gb_v1.yaml \
+  --config configs/model_lgbm_v2.yml \
   --drift-report artifacts/monitoring/drift/drift_report_<timestamp>.json \
   --psi-threshold 0.2
 ```

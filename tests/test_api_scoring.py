@@ -26,6 +26,7 @@ def _inject_state(app_instance, model=None, feature_list=None, threshold=0.5):
     app_instance.state.threshold = threshold
     app_instance.state.model_name = "gb"
     app_instance.state.model_version = "v1"
+    app_instance.state.native_nan = False
 
 
 @pytest.fixture()

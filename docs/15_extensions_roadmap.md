@@ -189,7 +189,7 @@ locally but could break silently on a new contributor's changes.
 **Extension:** Add `.github/workflows/ci.yml` running on every push to
 any branch:
 ```yaml
-- python -m pip install -r requirements-dev.txt
+- python -m pip install -e ".[dev]"
 - python -m pytest tests/ -v
 - python -m flake8 src/ app/ scripts/ --max-line-length=100
 ```

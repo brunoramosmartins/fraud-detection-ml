@@ -2,11 +2,12 @@ from pathlib import Path
 from typing import Any, Dict
 
 import yaml
+from sklearn.pipeline import Pipeline
 
 from src.data.loader import load_full_training_dataset
 from src.data.schema import validate_schema
 from src.data.split import temporal_train_val_split
-from src.features.pipeline import build_features
+from src.features.pipeline import FeatureBuilderV2, build_features
 from src.models.artifacts import save_model_artifact
 from src.models.factory import get_model
 from src.models.metrics import compute_classification_metrics
@@ -30,7 +31,8 @@ def run_training_pipeline(
     Parameters
     ----------
     model_name : str
-        Model identifier passed to :func:`get_model` (``"lr"``, ``"rf"``, or ``"gb"``).
+        Model identifier passed to :func:`get_model` (``"lr"``, ``"rf"``,
+        ``"gb"``, or ``"lgbm"``).
     config_path : Path
         Path to the YAML config with hyperparameters and feature set.
     dataset_version : str
@@ -58,8 +60,18 @@ def run_training_pipeline(
         amount_col="TransactionAmt",
     )
 
-    X_train, feature_list = build_features(X_train_raw, feature_set=config.get("feature_set", "v1"))
-    X_val, _ = build_features(X_val_raw, feature_set=config.get("feature_set", "v1"))
+    feature_set = config.get("feature_set", "v1")
+    if feature_set == "v2":
+        # v2 (ADR-006): stateful builder — encoders fit on the train
+        # partition only, NaNs preserved for LightGBM's native handling.
+        builder = FeatureBuilderV2()
+        X_train = builder.fit_transform(X_train_raw)
+        X_val = builder.transform(X_val_raw)
+        feature_list = builder.feature_list_
+    else:
+        builder = None
+        X_train, feature_list = build_features(X_train_raw, feature_set=feature_set)
+        X_val, _ = build_features(X_val_raw, feature_set=feature_set)
 
     model = get_model(model_name, config=config.get("models", {}))
     model.fit(X_train, y_train)
@@ -76,14 +88,24 @@ def run_training_pipeline(
 
     metadata = {
         "model_name": model_name,
-        "feature_set": config.get("feature_set", "v1"),
+        "version": config.get("version", "v1"),
+        "feature_set": feature_set,
         "feature_list": feature_list,
         "dataset_version": dataset_version,
         "config_file": str(config_path),
         "metrics": metrics,
     }
+    artifact = model
+    if builder is not None:
+        # Serve the builder and the model as one artifact: predict_proba
+        # takes the RAW request columns and applies the frozen encoder
+        # state internally (ADR-006 — encoders ship with the artifact).
+        artifact = Pipeline(steps=[("features", builder), ("clf", model)])
+        metadata["feature_list"] = builder.input_columns_  # API request contract
+        metadata["model_feature_list"] = feature_list  # engineered, for SHAP/docs
+        metadata["imputation"] = "native"  # API must NOT fillna(0)
     model_path, meta_path = save_model_artifact(
-        model=model,
+        model=artifact,
         metadata=metadata,
         model_name=model_name,
         version=config.get("version", "v1"),

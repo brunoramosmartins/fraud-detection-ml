@@ -24,19 +24,19 @@ The model is trained on historical transaction data and uses behavioral and tran
 
 ## The Result
 
-At its operating threshold, the system reduces the expected monetary loss from $610,000 to $252,000 — a **reduction of 58.7%**, or $358,000 in prevented losses over the validation period.
+At its operating threshold, the system reduces the expected monetary loss from $610,000 to $175,000 — a **reduction of 71.3%**, or $435,000 in prevented losses over the validation period. The first-generation system (v1) achieved a 58.7% reduction; the current model (v2, introduced in Phase 9) recovers a further $77,000 by restoring the categorical signals v1 discarded and letting the model handle missing data natively.
 
-This improvement comes at a cost: approximately **26% of legitimate transactions** are flagged at this operating point, requiring review or triggering a friction step such as additional authentication. The precision of the system — the fraction of flagged transactions that are genuinely fraudulent — is approximately 10%.
+This improvement comes at a cost: approximately **14% of legitimate transactions** are flagged at this operating point (down from 26% in v1), requiring review or triggering a friction step such as additional authentication. The precision of the system — the fraction of flagged transactions that are genuinely fraudulent — is approximately 18%.
 
-This precision figure requires context. With a fraud rate of 3.5%, a random review queue would contain 3.5% fraud. The model raises that to 10% — meaning the model makes the review queue roughly three times more efficient than random sampling. In practice, financial institutions accept low precision at the alert stage because the cost of missing fraud exceeds the cost of reviewing a false alarm.
+This precision figure requires context. With a fraud rate of 3.5%, a random review queue would contain 3.5% fraud. The model raises that to 18% — meaning the model makes the review queue roughly five times more efficient than random sampling (v1 managed three times). In practice, financial institutions accept low precision at the alert stage because the cost of missing fraud exceeds the cost of reviewing a false alarm.
 
-The model's discriminative ability — how well it separates fraudulent from legitimate transactions across all possible thresholds — achieves a score of **0.861 on a 0–1 scale**, where 1 represents perfect separation. This indicates strong signal in the data that the model is successfully capturing.
+The model's discriminative ability — how well it separates fraudulent from legitimate transactions across all possible thresholds — achieves a score of **0.930 on a 0–1 scale** (v1: 0.861), where 1 represents perfect separation. This indicates strong signal in the data that the model is successfully capturing.
 
 ---
 
 ## The Trade-off
 
-The threshold of 0.02 was chosen because, at that point, total cost is minimized given the assumed cost structure: missing a fraud costs the full transaction amount, while a false alarm costs a fixed operational fee.
+The threshold of 0.003 was chosen because, at that point, total cost is minimized given the assumed cost structure: missing a fraud costs the full transaction amount, while a false alarm costs a fixed operational fee. (v1 operated at 0.02; the v2 model separates classes more sharply, which pushes its cost-optimal threshold lower.)
 
 If the institution is more concerned about customer experience and has a limited review team, a higher threshold would be appropriate — fewer alerts, but more fraud slipping through. If the institution is in a high-risk environment or faces regulatory pressure to minimize fraud losses, a lower threshold may be warranted.
 
@@ -50,10 +50,10 @@ This system was built and evaluated on a single historical dataset. In a real de
 
 The system includes a monitoring component that tracks whether the distribution of incoming transactions has shifted relative to the training data. When shift is detected above a defined threshold, a retraining workflow is triggered automatically. This simulation demonstrates the concept; a production system would require additional safeguards, human oversight, and a more sophisticated retraining strategy.
 
-Additionally, this system produces a probability score but not an explanation. For a human analyst reviewing a flagged transaction, knowing the score is 0.85 provides limited guidance on why the transaction was flagged or what to look for. Explainability is a known gap in this type of model and an important consideration for regulatory compliance.
+Additionally, the score alone provides limited guidance to a human analyst. Since Phase 9 the system computes per-prediction attributions (TreeSHAP): for any flagged transaction, the top features driving the score can be listed, supporting analyst review and regulatory explainability requirements. Serving these explanations in real time (rather than on demand) remains future work.
 
 ---
 
 ## Summary
 
-The system transforms a fraud detection problem into a cost minimization problem, selects a model and operating threshold that minimize total expected loss, and delivers a **58.7% reduction in expected fraud-related costs** compared to an uncontrolled approval policy. It operates as a containerized service, can process transactions in real time, and includes mechanisms to detect when the model's environment has shifted and retraining is needed.
+The system transforms a fraud detection problem into a cost minimization problem, selects a model and operating threshold that minimize total expected loss, and delivers a **71.3% reduction in expected fraud-related costs** (58.7% in its first generation) compared to an uncontrolled approval policy. It operates as a containerized service, can process transactions in real time, explains individual decisions on demand, and includes mechanisms to detect when the model's environment has shifted and retraining is needed.

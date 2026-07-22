@@ -12,7 +12,7 @@ from src.pipelines.training_pipeline import run_training_pipeline
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train fraud detection model.")
-    parser.add_argument("--model", required=True, choices=["lr", "rf", "gb"])
+    parser.add_argument("--model", required=True, choices=["lr", "rf", "gb", "lgbm"])
     parser.add_argument("--config", required=True, help="Path to YAML config file.")
     parser.add_argument("--dataset-version", default="ieee-cis-original")
     return parser.parse_args()

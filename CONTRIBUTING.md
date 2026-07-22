@@ -19,8 +19,8 @@ python -m venv .venv
 source .venv/Scripts/activate   # Windows Git Bash
 # source .venv/bin/activate      # Linux / macOS
 
-# Install development dependencies (includes test and notebook extras)
-pip install -r requirements-dev.txt
+# Install the project with dev extras (add ,notebooks for Jupyter/plotting)
+pip install -e ".[dev]"
 ```
 
 Place the IEEE-CIS dataset files in `data/raw/`:

@@ -1,5 +1,5 @@
 # Fraud Detection ML System — Makefile
-# Requires: Python 3.10, virtualenv at .venv/, dataset files in data/raw/
+# Requires: Python 3.10+, virtualenv at .venv/, dataset files in data/raw/
 #
 # Usage:
 #   make setup     Install all dev dependencies
@@ -15,7 +15,7 @@ PYTHON    := .venv/Scripts/python
 PIP       := .venv/Scripts/pip
 PYTEST    := .venv/Scripts/pytest
 UVICORN   := .venv/Scripts/uvicorn
-CONFIG    := configs/model_gb_v1.yml
+CONFIG    := configs/model_lgbm_v2.yml
 REFERENCE := data/raw/train_transaction.csv
 
 .PHONY: setup train test api simulate monitor demo clean help
@@ -24,14 +24,14 @@ REFERENCE := data/raw/train_transaction.csv
 setup:
 	@echo ">>> Creating virtual environment..."
 	python -m venv .venv
-	@echo ">>> Installing dev dependencies..."
-	$(PIP) install -r requirements-dev.txt
+	@echo ">>> Installing project + dev dependencies (pyproject.toml)..."
+	$(PIP) install -e ".[dev]"
 	@echo ">>> Setup complete. Activate with: source .venv/Scripts/activate"
 
 # ── Training ─────────────────────────────────────────────────────────────────
 train:
-	@echo ">>> Training Gradient Boosting model..."
-	$(PYTHON) scripts/train_model.py --model gb --config $(CONFIG)
+	@echo ">>> Training LightGBM v2 model (served)..."
+	$(PYTHON) scripts/train_model.py --model lgbm --config $(CONFIG)
 	@echo ">>> Model artifact saved to artifacts/models/"
 
 # ── Tests ────────────────────────────────────────────────────────────────────
@@ -86,8 +86,6 @@ demo: train test
 	@echo ""
 	@echo "  API health check:"
 	@echo "    curl http://localhost:8000/health"
-	@echo ""
-	@echo "  See DEMO.md for the full interview walkthrough."
 	@echo "============================================================"
 
 # ── Clean ────────────────────────────────────────────────────────────────────
@@ -104,8 +102,8 @@ clean:
 help:
 	@echo "Available targets:"
 	@echo "  setup     Install dev dependencies"
-	@echo "  train     Train the GB model"
-	@echo "  test      Run pytest suite (14 tests)"
+	@echo "  train     Train the served LightGBM v2 model"
+	@echo "  test      Run pytest suite"
 	@echo "  api       Start FastAPI on port 8000"
 	@echo "  simulate  Send transaction batches to API"
 	@echo "  monitor   Compute PSI and performance metrics"

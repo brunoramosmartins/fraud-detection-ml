@@ -65,7 +65,10 @@ logs/
 # ==============================
 # Model Artifacts
 # ==============================
-models/
+# NOTE: anchored to repo root so it does NOT match the src/models/ source
+# package. Trained-model binaries are ignored by the *.pkl/*.joblib/etc.
+# patterns above regardless of directory.
+/models/
 outputs/
 checkpoints/
 *.onnx
@@ -91,3 +94,6 @@ build/
 *.egg-info/
 .coverage
 xgb-fraud-with-magic-0-9600.ipynb
+
+# Personal interview notes (not published)
+DEMO.md

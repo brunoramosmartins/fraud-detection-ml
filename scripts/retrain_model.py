@@ -19,7 +19,10 @@ def parse_args() -> argparse.Namespace:
         "--psi-threshold", type=float, default=0.2, help="PSI threshold to trigger retraining."
     )
     parser.add_argument(
-        "--model-name", default="gb", choices=["lr", "rf", "gb"], help="Model to retrain."
+        "--model-name",
+        default="lgbm",
+        choices=["lr", "rf", "gb", "lgbm"],
+        help="Model to retrain.",
     )
     return parser.parse_args()
 
