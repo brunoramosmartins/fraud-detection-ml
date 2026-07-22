@@ -81,8 +81,10 @@ def threshold_sweep(
     """Find the decision threshold that minimizes Expected Monetary Loss.
 
     Evaluates EML at each candidate threshold and returns the one with
-    the lowest total cost.  When no thresholds are provided, a default
-    grid of 99 evenly spaced values in [0.01, 0.99] is used.
+    the lowest total cost.  When no thresholds are provided, the default
+    grid covers [0.001, 0.99]: a fine region below 0.01 (well-separated
+    models on imbalanced data push the EML optimum there — the v2
+    LightGBM's optimum is ~0.003) plus the classic 0.01–0.99 sweep.
 
     Parameters
     ----------
@@ -110,7 +112,9 @@ def threshold_sweep(
         EML at each evaluated threshold.
     """
     if thresholds is None:
-        thresholds = np.linspace(0.01, 0.99, 99)
+        thresholds = np.concatenate(
+            [np.arange(0.001, 0.01, 0.0005), np.linspace(0.01, 0.99, 99)]
+        )
     thresholds_arr = np.asarray(list(thresholds))
     losses = np.array(
         [expected_loss(y_true, proba, amount, c_fp, t) for t in thresholds_arr]
@@ -154,6 +158,103 @@ def precision_fpr_at_threshold(
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
     fpr = fp / (fp + tn) if (fp + tn) > 0 else 0.0
     return float(precision), float(fpr)
+
+
+def reliability_table(
+    y_true: Sequence[int],
+    proba: Sequence[float],
+    n_bins: int = 10,
+    strategy: str = "quantile",
+) -> Dict[str, np.ndarray]:
+    """Bin predictions and compare mean predicted probability to observed rate.
+
+    The table is the numeric form of a reliability (calibration) diagram:
+    within each bin, a calibrated model has ``mean_predicted`` close to
+    ``observed_rate``.
+
+    Parameters
+    ----------
+    y_true : Sequence[int]
+        Ground-truth binary labels (1 = fraud, 0 = legitimate).
+    proba : Sequence[float]
+        Model-predicted fraud probabilities.
+    n_bins : int
+        Number of bins.
+    strategy : str
+        ``"quantile"`` (equal-count bins — robust when scores concentrate
+        near 0, as in fraud) or ``"uniform"`` (equal-width bins on [0, 1]).
+
+    Returns
+    -------
+    Dict[str, np.ndarray]
+        Arrays keyed by ``bin_lower``, ``bin_upper``, ``count``,
+        ``mean_predicted``, ``observed_rate``. Empty bins are dropped, so
+        arrays may be shorter than ``n_bins`` (quantile edges also collapse
+        when scores tie).
+    """
+    y = np.asarray(y_true).astype(int)
+    p = np.asarray(proba, dtype=float)
+    if strategy == "quantile":
+        edges = np.unique(np.quantile(p, np.linspace(0.0, 1.0, n_bins + 1)))
+    elif strategy == "uniform":
+        edges = np.linspace(0.0, 1.0, n_bins + 1)
+    else:
+        raise ValueError(f"Unknown binning strategy: {strategy}")
+
+    idx = np.digitize(p, edges[1:-1], right=False)
+    rows = []
+    for b in range(len(edges) - 1):
+        mask = idx == b
+        if not mask.any():
+            continue
+        rows.append(
+            (edges[b], edges[b + 1], int(mask.sum()), p[mask].mean(), y[mask].mean())
+        )
+    lower, upper, count, mean_pred, observed = (np.array(x) for x in zip(*rows))
+    return {
+        "bin_lower": lower,
+        "bin_upper": upper,
+        "count": count,
+        "mean_predicted": mean_pred,
+        "observed_rate": observed,
+    }
+
+
+def expected_calibration_error(
+    y_true: Sequence[int],
+    proba: Sequence[float],
+    n_bins: int = 10,
+    strategy: str = "quantile",
+) -> float:
+    """Expected Calibration Error: count-weighted |predicted − observed| gap.
+
+    .. math::
+
+        \\mathrm{ECE} = \\sum_b \\frac{n_b}{N}
+        \\left| \\bar{p}_b - \\bar{y}_b \\right|
+
+    where :math:`\\bar{p}_b` is the mean predicted probability and
+    :math:`\\bar{y}_b` the observed positive rate in bin :math:`b`.
+
+    Parameters
+    ----------
+    y_true : Sequence[int]
+        Ground-truth binary labels.
+    proba : Sequence[float]
+        Model-predicted fraud probabilities.
+    n_bins : int
+        Number of bins passed to :func:`reliability_table`.
+    strategy : str
+        Binning strategy passed to :func:`reliability_table`.
+
+    Returns
+    -------
+    float
+        ECE in [0, 1]; 0 is perfectly calibrated.
+    """
+    tbl = reliability_table(y_true, proba, n_bins=n_bins, strategy=strategy)
+    weights = tbl["count"] / tbl["count"].sum()
+    return float(np.sum(weights * np.abs(tbl["mean_predicted"] - tbl["observed_rate"])))
 
 
 def compute_classification_metrics(
