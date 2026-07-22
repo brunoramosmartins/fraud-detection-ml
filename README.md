@@ -7,9 +7,10 @@
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-1.7%2B-orange)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.1xx-green)
 ![Docker](https://img.shields.io/badge/Docker-ready-blue)
-![pytest](https://img.shields.io/badge/tests-115%20passing-brightgreen)
+![pytest](https://img.shields.io/badge/tests-122%20passing-brightgreen)
 ![CI](https://img.shields.io/badge/CI-GitHub%20Actions-blue)
 ![ruff](https://img.shields.io/badge/linting-ruff-purple)
+[![Kaggle Notebook](https://img.shields.io/badge/Kaggle-Fraud%20in%20Dollars%2C%20Not%20AUC-20BEFF?logo=kaggle&logoColor=white)](https://www.kaggle.com/code/brunoramosmartins/fraud-detection-in-dollars-not-auc)
 
 ---
 
@@ -38,32 +39,47 @@ comparison.
 > into the artifact. Per-prediction explanations via native TreeSHAP
 > (`scripts/shap_analysis.py`).
 
-### Kaggle Extension (Phase 8)
+### Kaggle Results (Phases 8–10)
 
 The system was extended into a Kaggle-competitive investigation on the IEEE-CIS
-leaderboard (late submissions), framed as four pre-registered hypotheses. A
-single, explainable LightGBM with entity-aggregation features reached **private
-LB 0.9078** (public 0.9377), up from the production pipeline's 0.8749 on the same
-Kaggle test set.
+leaderboard (late submissions), framed as four pre-registered hypotheses. Each
+feature block was added on its own and scored on the frozen leaderboard, so
+every gain is attributable:
 
-| Milestone | Private LB |
-|---|---|
-| Production pipeline (sklearn GB, numeric-only) | 0.8749 |
-| **This project — single LightGBM + feature engineering** | **0.9078** |
-| Reference: strongest public single model (Deotte) | 0.9324 |
-| Reference: 1st-place ensemble | 0.9459 |
+| Step | Feature block | Public LB | Private LB |
+|---|---|---|---|
+| EXP-000 | production baseline (sklearn GB, numeric-only) | 0.8896 | 0.8749 |
+| EXP-001 | LightGBM + native NaN | 0.9134 | 0.8877 |
+| EXP-002 | categorical encodings | 0.9251 | 0.8968 |
+| EXP-003 | time / amount / D-normalization | 0.9284 | 0.8998 |
+| EXP-004 | minimal UID key | 0.9314 | 0.9032 |
+| EXP-006 | full aggregation engine | 0.9377 | 0.9078 |
+| EXP-007 | temporal-stability selection | 0.9344 | 0.9077 |
 
-The headline is the method, not the number: every gain was scored one feature
-block at a time on the frozen leaderboard, compared with a DeLong test on an
-internal temporal holdout, and given an honest verdict — including four
-hypotheses that returned inconclusive or rejected. Central finding: **internal
-validation systematically overstates private-LB gains under temporal drift**, and
-a seen/unseen-client diagnostic (holdout AUC 0.99 on known clients vs 0.90 on new
-ones) explains why. Full write-up in [`docs/kaggle/`](docs/kaggle/).
+A single, explainable LightGBM reached **private LB 0.9078** — up from the
+production baseline's 0.8749, a **+0.033** gain that is broad and incremental
+rather than driven by any one "magic" block. Every claim traces to
+[`docs/kaggle/submission-log.md`](docs/kaggle/submission-log.md).
 
-> Late submissions receive leaderboard scores but no rank. This was a
-> learning-focused single-model investigation, deliberately without the
-> multi-model ensembling and post-processing the top solutions used.
+**Honest placement.** Late submissions receive leaderboard scores but no rank.
+Private 0.9078 sits around the **median of the 6,381 teams** on the frozen
+leaderboard (1st place 0.9459; strongest public single model, Deotte, 0.9324).
+This was a learning-focused single-model investigation, deliberately *without*
+the multi-model ensembling and entity-linkage the top solutions used — the goal
+was a decision system you can defend, not a rank.
+
+The headline is the method, not the number: every gain was scored one block at a
+time, compared with a DeLong test on an internal temporal holdout, and given an
+honest verdict — four hypotheses returned inconclusive or rejected. Central
+finding: **internal validation systematically overstates private-LB gains under
+temporal drift**, and a seen/unseen-client diagnostic (holdout AUC 0.99 on known
+clients vs 0.90 on new ones) explains why. Full write-up in
+[`docs/kaggle/`](docs/kaggle/).
+
+📓 **Public notebook:** [Fraud Detection in Dollars, Not
+AUC](https://www.kaggle.com/code/brunoramosmartins/fraud-detection-in-dollars-not-auc)
+— the cost-sensitive framing (threshold as a business decision, monetary
+waterfall) that reframes the problem from AUC to dollars prevented.
 
 ---
 

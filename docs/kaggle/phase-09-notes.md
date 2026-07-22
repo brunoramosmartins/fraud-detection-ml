@@ -124,30 +124,74 @@ matrix. Capped `pandas<3.0` (pandas 3 changes string-dtype defaults the
 
 ## Lessons Learned
 
-<!-- Author to complete in first person — this is interview/writeup material and
-     must be in your own words. Prompts below are only scaffolding; delete them.
+**Feature engineering is where the top solutions spent their effort — and it is
+the hardest part to do well.** Reading the highest-placed public IEEE-CIS
+notebooks, the recurring pattern was that the winning margin came from feature
+engineering, not model class or hyperparameter tuning. In my experience this is
+also the most difficult phase, and the difficulty is specific: with anonymized
+features there is no domain context to prune the search, yet the space of
+candidate features — especially interactions and aggregations — is
+combinatorially large. The real problem is prioritization: among all the
+relationships one *could* construct, which few justify the cost of
+implementation, a leakage argument, and an impact measurement?
 
-  - The ADR-006 boundary as a reusable idea: what makes a Kaggle feature
-    "die at the serving boundary"? (transductive vs row-local vs frozen-state)
-  - What did the exact 0.929588 reproduction prove about porting notebook code
-    into a src/ package — and why does that matter in an interview?
-  - The isotonic result: why "monotone calibration can't improve optimal-
-    threshold EML" is a sharper thing to say than "we tried calibration".
-  - The threshold-grid clipping: a $18k lesson about default sweep ranges.
-  - SHAP block-attribution as evidence FOR a design decision, not just an
-    explainability checkbox.
--->
+The answer this project converged on was process, not intuition: pre-register
+one feature block per experiment, state its leakage argument before building
+it, and measure each block in isolation on both the internal holdout and the
+leaderboard (`experiment-registry.md`, `fe-playbook.md`). That discipline does
+not tell you which feature is best, but it bounds the search and makes every
+"no" as informative as every "yes" — the H1–H4 nulls were as useful as the
+gains. ADR-006 is the same idea applied one layer down, at the serving
+boundary: of the blocks that worked on Kaggle, only the subset that survives
+real-time constraints earns a place in production.
+
+**Adversarial validation was the most valuable new technique I took from the
+winners.** Training a classifier to predict whether a row belongs to the train
+or the test split — then reading its AUC and feature importances — is a direct,
+quantitative measure of distribution shift: a high AUC means train and test are
+separable (features have drifted, or a feature is leaking), and the importances
+point at exactly which features are responsible. I had not used this before,
+and it reframes validation as something you can *test* rather than assume. It
+connects straight to this extension's central finding — the internal holdout
+systematically overstated private-LB gains under temporal drift — and the
+seen/unseen-UID diagnostic (EXP-007) turned out to be a targeted version of the
+same question: how distributionally different is the future test period, and
+where does the difference live. Adversarial validation is the general tool for
+that question; I would reach for it first in any future tabular project with a
+temporal or population gap between training and serving.
+
+**One consequence worth stating explicitly:** the parts that decided this
+competition — feature engineering and validation design — are exactly the parts
+that do not automate. Model class and tuning were close to commodities; the
+human judgment lived in what to build and how to check it. That is where I want
+to keep improving.
 
 ## Failed Attempts
 
-<!-- Author to complete in first person — honest nulls and dead ends are the
-     most valuable interview material. Prompts below are only scaffolding.
+- **Isotonic calibration — tested and rejected.** The v2 model is
+  under-confident (ECE ≈ 0.014), so isotonic regression improved calibration
+  markedly (ECE ≈ 0.004) on a leak-free split. But the EML gain was +0.71% —
+  noise. Isotonic is monotone, so it cannot change the score *ranking* and
+  therefore cannot move the optimal-threshold EML; it only re-labels the
+  threshold axis. Adopting it would have added a calibration stage for no
+  decision-level benefit. (It would matter under a per-transaction
+  decision-theoretic rule, `flag when p > c_fp / amount`; noted as future
+  work.) The sharper takeaway than "we tried calibration": calibration helps
+  probability *consumers*, not threshold-optimal *classifiers*.
 
-  - Isotonic calibration: adopted? No — record why it was the right call to
-    reject despite the ECE improvement looking attractive.
-  - The empty-venv false alarm (Python 3.14): what actually broke vs what it
-    looked like it broke, and how the diagnosis went.
-  - The sklearn 1.9 test stub (Pipeline check_is_fitted rejecting a plain
-    stub) — a small one, include only if useful.
-  - The reliability-table degenerate-bin bug (constant scores → zero bins).
--->
+- **"All tests fail" after the Python 3.14 upgrade was a false alarm.** The
+  recreated venv was effectively empty — `pip install -e .` pulled nothing
+  because `pyproject.toml` declared no dependencies. Nothing was wrong with the
+  test logic. Lesson: when an entire suite fails identically right after an
+  environment change, suspect the environment before the code.
+
+- **The default EML threshold grid was silently clipping the optimum.** The
+  sweep started at 0.01; the v2 model's cost-optimal point is 0.003, so the
+  reported operating point left ~$18k of avoidable loss on the table until the
+  calibration check extended the grid below 0.01. A reminder that a "tuned"
+  hyperparameter is only as good as the range it was searched over.
+
+- **Two small ones, fixed in passing:** the sklearn 1.9 `Pipeline` rejected a
+  plain stub in the API contract test (its `check_is_fitted` needed a real
+  `BaseEstimator` with a fitted attribute), and the reliability table crashed on
+  constant scores (quantile edges collapsed to a single value → zero bins).
