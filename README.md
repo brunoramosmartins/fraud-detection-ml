@@ -6,7 +6,7 @@
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-1.7-orange)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.135-green)
 ![Docker](https://img.shields.io/badge/Docker-ready-blue)
-![pytest](https://img.shields.io/badge/tests-28%20passing-brightgreen)
+![pytest](https://img.shields.io/badge/tests-115%20passing-brightgreen)
 ![CI](https://img.shields.io/badge/CI-GitHub%20Actions-blue)
 ![ruff](https://img.shields.io/badge/linting-ruff-purple)
 
@@ -134,7 +134,7 @@ Reframed modeling as a pre-registered research question (H1–H4) on the IEEE-CI
 # Clone and install
 git clone https://github.com/brunoramosmartins/fraud-detection-ml.git
 cd fraud-detection-ml
-make setup                   # creates .venv and installs requirements-dev.txt
+make setup                   # creates .venv and installs the project + dev extras
 
 # Full demo pipeline (train + test)
 make demo
@@ -153,7 +153,7 @@ See [`DEMO.md`](DEMO.md) for the full interview walkthrough with anticipated que
 
 ```bash
 python -m venv .venv && source .venv/Scripts/activate  # Windows
-pip install -r requirements-dev.txt
+pip install -e ".[dev]"
 python scripts/train_model.py --model gb --config configs/model_gb_v1.yml
 python -m pytest tests/ -v
 uvicorn app.main:app --host 0.0.0.0 --port 8000
@@ -213,8 +213,7 @@ fraud-detection-ml/
 ├── .github/workflows/ci.yml   # CI: lint + test + coverage
 ├── DEMO.md                     # Interview runbook with Q&A
 ├── CONTRIBUTING.md             # Dev setup and commit conventions
-├── requirements.txt            # Production dependencies
-└── requirements-dev.txt        # Development + test dependencies
+└── pyproject.toml              # Project metadata, dependencies, tool config
 ```
 
 ---

@@ -1,5 +1,5 @@
 # Fraud Detection ML System — Makefile
-# Requires: Python 3.10, virtualenv at .venv/, dataset files in data/raw/
+# Requires: Python 3.10+, virtualenv at .venv/, dataset files in data/raw/
 #
 # Usage:
 #   make setup     Install all dev dependencies
@@ -24,8 +24,8 @@ REFERENCE := data/raw/train_transaction.csv
 setup:
 	@echo ">>> Creating virtual environment..."
 	python -m venv .venv
-	@echo ">>> Installing dev dependencies..."
-	$(PIP) install -r requirements-dev.txt
+	@echo ">>> Installing project + dev dependencies (pyproject.toml)..."
+	$(PIP) install -e ".[dev]"
 	@echo ">>> Setup complete. Activate with: source .venv/Scripts/activate"
 
 # ── Training ─────────────────────────────────────────────────────────────────
@@ -105,7 +105,7 @@ help:
 	@echo "Available targets:"
 	@echo "  setup     Install dev dependencies"
 	@echo "  train     Train the GB model"
-	@echo "  test      Run pytest suite (14 tests)"
+	@echo "  test      Run pytest suite"
 	@echo "  api       Start FastAPI on port 8000"
 	@echo "  simulate  Send transaction batches to API"
 	@echo "  monitor   Compute PSI and performance metrics"

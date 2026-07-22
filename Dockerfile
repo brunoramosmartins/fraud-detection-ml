@@ -5,14 +5,17 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app
 
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt \
- && apt-get update && apt-get install -y --no-install-recommends curl \
- && rm -rf /var/lib/apt/lists/*
-
+COPY pyproject.toml ./
 COPY src ./src
 COPY app ./app
 COPY configs ./configs
+
+# Editable install: dependencies come from pyproject.toml, while the code
+# keeps running from /app so PROJECT_ROOT-relative paths (artifacts, configs)
+# resolve correctly (see src/utils/config.py).
+RUN pip install --no-cache-dir -e . \
+ && apt-get update && apt-get install -y --no-install-recommends curl \
+ && rm -rf /var/lib/apt/lists/*
 
 # Copy only the model artifacts needed for serving.
 # In a production setup, replace this COPY with a volume mount or a startup

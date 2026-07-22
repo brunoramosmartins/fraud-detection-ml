@@ -38,11 +38,11 @@ Main components:
 ### Prerequisites
 
 ```bash
-# Install production dependencies
-pip install -r requirements.txt
+# Install production dependencies only
+pip install -e .
 
-# Install dev / test dependencies
-pip install -r requirements-dev.txt
+# Install with dev / test dependencies
+pip install -e ".[dev]"
 ```
 
 ### Step 1 — Train a model
